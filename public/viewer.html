@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trajectory Viewer</title>
+<style>
+/* ═══ RESET & BASE ═══ */
+:root {
+  --bg: #06060e;
+  --glass: rgba(255,255,255,0.035);
+  --glass-border: rgba(255,255,255,0.07);
+  --glass-hover: rgba(255,255,255,0.06);
+  --glass-hover-border: rgba(255,255,255,0.12);
+  --text: #e2e8f0;
+  --text-sec: #94a3b8;
+  --text-muted: #64748b;
+  --text-dim: #334155;
+  --blue: #60a5fa;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --cyan: #22d3ee;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --mono: 'SF Mono','Cascadia Code','Fira Code',Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px;height:100vh;overflow:hidden;position:relative}
+
+/* ═══ BACKGROUND ORBS ═══ */
+.bg-orbs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(100px)}
+.orb-1{width:700px;height:700px;background:rgba(99,102,241,0.07);top:-15%;left:5%;animation:f1 25s ease-in-out infinite}
+.orb-2{width:500px;height:500px;background:rgba(139,92,246,0.05);bottom:0;right:5%;animation:f2 30s ease-in-out infinite}
+.orb-3{width:400px;height:400px;background:rgba(14,165,233,0.04);top:40%;left:45%;animation:f3 20s ease-in-out infinite}
+@keyframes f1{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,40px)}}
+@keyframes f2{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,-50px)}}
+@keyframes f3{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}
+
+/* ═══ GLASS ═══ */
+.glass{background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.03)}
+
+/* ═══ LOADING ═══ */
+#loading{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:16px}
+.spinner{display:inline-block;width:24px;height:24px;border:2px solid var(--glass-border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-text{color:var(--text-muted);font-size:12px}
+
+/* ═══ APP SHELL ═══ */
+#app{position:relative;z-index:1;display:none;flex-direction:column;height:100vh}
+.topbar{background:rgba(8,8,22,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border);padding:0 20px;display:flex;align-items:stretch;flex-shrink:0;min-height:46px;z-index:10}
+.task-title{display:flex;align-items:center;gap:8px;margin-right:16px;flex-shrink:0;overflow:hidden}
+.task-title .tt-name{color:var(--text);font-size:13px;font-weight:600;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tt-badge{padding:2px 8px;border-radius:5px;font-size:10px;font-weight:600;background:rgba(255,255,255,0.05);color:var(--text-sec);border:1px solid rgba(255,255,255,0.05);white-space:nowrap}
+.tt-lang{color:var(--cyan);background:rgba(34,211,238,0.08);border-color:rgba(34,211,238,0.15)}
+.tt-easy{color:var(--green);background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.15)}
+.tt-med{color:var(--amber);background:rgba(251,191,36,0.08);border-color:rgba(251,191,36,0.15)}
+.tt-hard{color:var(--red);background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.15)}
+.tt-turns{color:var(--blue);background:rgba(96,165,250,0.08);border-color:rgba(96,165,250,0.15)}
+.tt-badge.warn{color:var(--red);background:rgba(248,113,113,0.08);border-color:rgba(248,113,113,0.15)}
+.tabs{display:flex;align-items:stretch;overflow-x:auto;flex:1;gap:2px}
+.tab{padding:10px 20px;cursor:pointer;color:var(--text-muted);font-size:12px;font-weight:600;border-bottom:2px solid transparent;display:flex;align-items:center;gap:8px;transition:all .2s ease;white-space:nowrap;position:relative}
+.tab:hover{color:var(--text-sec);background:rgba(255,255,255,0.02)}
+.tab.active{color:var(--text);border-bottom-color:transparent}
+.tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:currentColor;border-radius:2px;animation:tabGlow .3s ease-out}
+@keyframes tabGlow{from{left:50%;right:50%;opacity:0}to{left:20%;right:20%;opacity:1}}
+.tab.overview-tab{color:var(--blue)}
+.tab.overview-tab.active{color:var(--blue);border-bottom-color:transparent}
+.tab .t-status{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.t-ok{background:var(--green)}.t-warn{background:var(--red)}
+.topbar .actions{display:flex;align-items:center;gap:8px;margin-left:auto;padding-left:12px;flex-shrink:0}
+.topbar .act-btn{padding:6px 14px;cursor:pointer;color:var(--text-muted);font-size:11px;border:1px solid var(--glass-border);border-radius:7px;background:transparent;font-family:inherit;transition:all .15s}
+.topbar .act-btn:hover{color:var(--text-sec);border-color:var(--glass-hover-border);background:rgba(255,255,255,0.03)}
+.topbar .act-btn.danger:hover{color:var(--red)}
+
+/* ═══ TAB TRANSITIONS ═══ */
+.view-enter{animation:viewEnter .15s ease-out both}
+@keyframes viewEnter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ═══ OVERVIEW VIEW ═══ */
+#compare-view{flex:1;overflow-y:auto;padding:28px;display:none}
+.cv-task-header{margin-bottom:20px;padding:20px 24px;font-size:13px;color:var(--text-sec);line-height:1.7}
+.cv-task-name{font-size:18px;font-weight:700;color:var(--text);margin:0 0 8px 0;letter-spacing:-0.3px}
+.cv-task-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.cv-problem-inner summary{font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:0.3px;cursor:pointer;outline:none;padding:2px 0;text-transform:uppercase;letter-spacing:0.8px;font-size:10px}
+.cv-problem-inner summary::-webkit-details-marker{color:var(--text-dim)}
+.cv-problem-text{margin-top:10px;white-space:pre-wrap}
+
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+.metric-card{padding:18px;transition:all .2s;cursor:pointer}
+.metric-card:hover{border-color:var(--glass-hover-border);background:var(--glass-hover);transform:translateY(-2px)}
+.mc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.mc-name .mc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.mc-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.mc-label{color:var(--text-muted);font-size:11px}
+.mc-value{font-size:12px;font-weight:700;font-family:var(--mono)}
+.progress-track{background:rgba(255,255,255,0.04);border-radius:6px;height:5px;overflow:hidden;margin-bottom:12px}
+.progress-fill{height:100%;border-radius:6px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.pf-green{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.pf-blue{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.pf-red{background:linear-gradient(90deg,#dc2626,#f87171)}
+
+.cv-table-wrap{padding:20px}
+.cv-table-wrap h3{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:12px;font-weight:700}
+.cv-table{width:100%;border-collapse:separate;border-spacing:0}
+.cv-table th{padding:10px 16px;text-align:center;font-size:12px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-sec);font-weight:700;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--glass-border)}
+.cv-table th:first-child{text-align:left;width:60px}
+.cv-table td{padding:10px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.03);color:var(--text);vertical-align:middle;text-align:center}
+.cv-table tr:hover td{background:rgba(255,255,255,0.02)}
+.cv-table td:first-child{font-weight:700;color:var(--text);text-align:left}
+.cell-pass{color:var(--green);font-size:14px}.cell-fail{color:var(--red);font-size:14px}.cell-wip{color:var(--amber);font-size:12px}
+.cell-turns{font-family:var(--mono);font-size:11px;color:var(--text-sec);margin-left:5px}
+
+/* ═══ MODEL VIEW ═══ */
+#model-view{flex:1;display:none;flex-direction:column;overflow:hidden}
+.mv-body{display:flex;flex:1;overflow:hidden}
+.convo{flex:1;overflow-y:auto;padding:0 0 80px}
+.turn-group{border-bottom:1px solid rgba(255,255,255,0.05)}
+.turn-group.ms-start{border-top:2px solid #818cf8;margin-top:8px}
+.turn-group.ms-start>.turn-header{background:rgba(129,140,248,0.04)}
+.turn-header{padding:10px 24px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;transition:background .15s}
+.turn-header:hover{background:rgba(255,255,255,0.02)}
+.turn-header .arrow{color:var(--text-muted);font-size:10px;transition:transform .15s;width:14px;flex-shrink:0}
+.turn-header .arrow.open{transform:rotate(90deg)}
+.turn-num{font-size:11px;font-weight:700;color:var(--blue);flex-shrink:0}
+.turn-preview{color:var(--text-muted);font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.turn-body{display:none}.turn-body.open{display:block}
+.ms-badge{display:inline-block;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:800;background:rgba(129,140,248,0.15);color:#818cf8;margin-left:4px}
+
+.msg-user{padding:14px 20px;border-left:3px solid rgba(255,255,255,0.15);margin:12px 24px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;background:rgba(255,255,255,0.02)}
+.msg-user-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:6px;font-weight:700}
+.msg-user-text{color:var(--text);font-size:13px;line-height:1.7;white-space:pre-wrap}
+.msg-asst{margin:0 24px 12px 48px;padding:0 0 0 16px;border-left:1px solid rgba(255,255,255,0.04)}
+.step-header{padding:8px 0 4px;color:var(--text-muted);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700}
+.asst-text{padding:8px 12px;margin:4px 0;color:var(--text-sec);font-size:13px;line-height:1.7;white-space:pre-wrap;border-radius:var(--radius-sm);background:rgba(255,255,255,0.015)}
+
+/* ═══ TOOL BLOCKS ═══ */
+.tool-block{margin:4px 0;border:1px solid rgba(255,255,255,0.04);border-radius:var(--radius-sm);background:rgba(255,255,255,0.015);overflow:hidden;border-left:3px solid rgba(255,255,255,0.06)}
+.tool-block.tbl-bash{border-left-color:var(--blue)}.tool-block.tbl-read{border-left-color:var(--green)}.tool-block.tbl-edit{border-left-color:var(--amber)}.tool-block.tbl-apply_patch{border-left-color:#fb923c}.tool-block.tbl-write{border-left-color:var(--cyan)}.tool-block.tbl-grep{border-left-color:var(--purple)}.tool-block.tbl-glob{border-left-color:var(--purple)}.tool-block.tbl-agent{border-left-color:#f0abfc}.tool-block.tbl-question{border-left-color:#f0abfc}.tool-block.tbl-task{border-left-color:#a8a29e}
+.tool-header{padding:6px 10px;display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.tool-header:hover{background:rgba(255,255,255,0.02)}
+.tool-header .arrow{color:var(--text-dim);font-size:10px;transition:transform .15s;width:14px;flex-shrink:0}
+.tool-header .arrow.open{transform:rotate(90deg)}
+.tool-badge{display:inline-block;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(255,255,255,0.04);font-family:var(--mono);flex-shrink:0}
+.tb-bash{color:var(--blue)}.tb-read{color:var(--green)}.tb-edit{color:var(--amber)}.tb-grep{color:var(--purple)}.tb-glob{color:var(--purple)}.tb-write{color:var(--cyan)}.tb-apply_patch{color:#fb923c}.tb-task{color:#a8a29e}.tb-question{color:#f0abfc}
+.tool-title{color:var(--text-sec);font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tool-dur{color:var(--text-dim);font-size:10px;font-family:var(--mono);flex-shrink:0}
+.tool-body{display:none;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.04)}.tool-body.open{display:block}
+.codeblock{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.04);border-radius:6px;padding:10px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all;font-size:11px;font-family:var(--mono);line-height:1.6;margin:4px 0;max-height:400px;overflow-y:auto;color:var(--text-sec)}
+.codeblock .cmd{color:var(--text)}.codeblock .out{color:var(--text-muted)}
+.diff{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.04);border-radius:6px;padding:10px 12px;overflow-x:auto;font-size:11px;font-family:var(--mono);line-height:1.6;margin:4px 0;max-height:400px;overflow-y:auto}
+.diff .del{background:rgba(239,68,68,0.08);color:var(--red);display:block}.diff .add{background:rgba(74,222,128,0.08);color:var(--green);display:block}
+.empty-resp{padding:8px 12px;color:var(--text-dim);font-size:12px;font-style:italic;margin:4px 0}
+
+/* ═══ RIGHT SIDEBAR ═══ */
+.sidebar{width:300px;min-width:280px;border-left:1px solid var(--glass-border);overflow-y:auto;flex-shrink:0;background:rgba(255,255,255,0.01)}
+.sidebar.hidden{display:none}
+.sidebar-tabs{display:flex;border-bottom:1px solid var(--glass-border)}
+.sidebar-tab{flex:1;padding:10px;text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:all .15s;border-bottom:2px solid transparent}
+.sidebar-tab:hover{color:var(--text-sec)}
+.sidebar-tab.active{color:var(--text);border-bottom-color:var(--blue)}
+.sidebar-content{padding:12px}
+.sidebar-pane{display:none}
+.sidebar-pane.active{display:block}
+
+/* Milestone cards (same as Phase 1) */
+.ms-panel h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:4px 6px;margin-bottom:6px;font-weight:700}
+.ms-card{padding:10px 12px;margin-bottom:6px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.015);cursor:pointer;transition:all .15s}
+.ms-card:hover{border-color:var(--glass-hover-border);background:var(--glass-hover)}
+.ms-card.ms-done{border-left:3px solid var(--green)}
+.ms-card.ms-active{border-left:3px solid var(--amber)}
+.ms-card.ms-pending{border-left:3px solid var(--text-dim)}
+.ms-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.ms-id{font-size:11px;font-weight:800;color:var(--text);background:rgba(129,140,248,0.12);padding:2px 8px;border-radius:4px}
+.ms-status{font-size:10px;text-transform:capitalize;font-weight:600}
+.ms-status-completed{color:var(--green)}.ms-status-in_progress{color:var(--amber)}.ms-status-pending,.ms-status-not_started{color:var(--text-dim)}
+.ms-prompt{color:var(--text-muted);font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:4px}
+.ms-meta{font-size:10px;color:var(--text-dim);font-family:var(--mono);display:flex;gap:10px}
+.ms-meta .int-ct{color:var(--purple)}
+
+/* Rubric tags (used in compare view) */
+.rubric-tag{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:600;border:1px solid transparent}
+.tag-must{background:rgba(248,113,113,0.06);color:#f08080;border-color:rgba(248,113,113,0.1)}
+.tag-good{background:rgba(251,191,36,0.05);color:#d4a94a;border-color:rgba(251,191,36,0.08)}
+.tag-universal{background:rgba(148,163,184,0.06);color:#8a9bb0;border-color:rgba(148,163,184,0.1)}
+.tag-positive{background:rgba(74,222,128,0.05);color:#5db87a;border-color:rgba(74,222,128,0.08)}
+.tag-negative{background:rgba(248,113,113,0.05);color:#d08080;border-color:rgba(248,113,113,0.08)}
+.tag-milestone{background:rgba(129,140,248,0.06);color:#9099e0;border-color:rgba(129,140,248,0.12)}
+.tag-type{background:rgba(148,163,184,0.05);color:#8a9bb0;border-color:rgba(148,163,184,0.08)}
+
+/* Save turn button */
+.save-turn-btn{background:none;border:none;cursor:pointer;font-size:16px;color:var(--text-dim);padding:2px 6px;transition:all .15s;flex-shrink:0;line-height:1;opacity:0.4}
+.save-turn-btn:hover{opacity:1;color:var(--amber);transform:scale(1.15)}
+.save-turn-btn.saved{opacity:1;color:var(--amber)}
+
+/* Saved cards in sidebar */
+.saved-card{padding:10px 12px;margin-bottom:6px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.015);cursor:pointer;transition:all .15s}
+.saved-card:hover{border-color:var(--glass-hover-border);background:var(--glass-hover)}
+.saved-head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.saved-model{font-size:10px;font-weight:700;color:var(--blue);background:rgba(96,165,250,0.1);padding:2px 7px;border-radius:4px}
+.saved-prompt{font-size:10px;font-weight:700;color:var(--text);flex:1}
+.saved-remove{background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:10px;padding:2px 4px;transition:color .15s;line-height:1}
+.saved-remove:hover{color:var(--red)}
+.saved-preview{color:var(--text-muted);font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.saved-note{font-size:10px;color:var(--amber);margin-top:4px;padding:3px 6px;background:rgba(251,191,36,0.06);border-radius:4px;border-left:2px solid var(--amber);line-height:1.3}
+.saved-clear-btn{padding:4px 12px;cursor:pointer;font-size:10px;font-weight:600;border-radius:4px;border:1px solid rgba(248,113,113,0.2);background:transparent;color:var(--red);font-family:inherit;transition:all .15s}
+.saved-clear-btn:hover{background:rgba(248,113,113,0.06);border-color:rgba(248,113,113,0.4)}
+
+/* Edit inline */
+.rubric-edit{padding:10px 12px;margin-bottom:6px;border-radius:var(--radius-sm);border:1px solid var(--blue);background:rgba(96,165,250,0.03)}
+.rubric-edit textarea{width:100%;padding:6px 8px;border-radius:4px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:var(--text);font-size:12px;font-family:inherit;outline:none;resize:vertical;min-height:50px;margin-bottom:6px}
+.rubric-edit textarea:focus{border-color:var(--blue)}
+.rubric-edit .re-row{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.rubric-edit select{padding:4px 6px;border-radius:4px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:var(--text);font-size:11px;font-family:inherit;outline:none}
+.rubric-edit .re-actions{display:flex;gap:6px}
+.rubric-edit .re-btn{padding:4px 12px;cursor:pointer;font-size:11px;font-weight:600;border-radius:4px;border:1px solid var(--glass-border);background:transparent;color:var(--text-sec);font-family:inherit;transition:all .15s}
+.rubric-edit .re-btn.save{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none}
+
+/* ═══ RUBRICS IN COMPARE VIEW ═══ */
+.cv-rubrics-wrap{padding:20px}
+.cv-rubrics-wrap h3{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:12px;font-weight:700}
+.cv-rubric-list{display:grid;grid-template-columns:1fr;gap:8px}
+.cv-rubric{padding:12px 16px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.015);transition:all .15s}
+.cv-rubric:hover{border-color:rgba(255,255,255,0.08)}
+.cv-rubric-top{display:flex;align-items:flex-start;gap:10px}
+.cv-rubric-criterion{flex:1;font-size:13px;color:var(--text);line-height:1.5}
+.cv-rubric-num{font-size:10px;font-weight:700;color:var(--text-dim);font-family:var(--mono);flex-shrink:0;min-width:24px}
+.cv-rubric-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.cv-rubric-rationale{font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.4}
+.cv-rubric-actions{display:flex;gap:4px;flex-shrink:0}
+.cv-rubric-actions button{padding:3px 8px;cursor:pointer;color:var(--text-dim);font-size:10px;border:1px solid transparent;border-radius:4px;background:transparent;font-family:inherit;transition:all .15s}
+.cv-rubric-actions button:hover{color:var(--text-sec);border-color:var(--glass-border)}
+.cv-rubric-actions .cv-rubric-del:hover{color:var(--red);border-color:rgba(248,113,113,0.3)}
+.cv-no-rubrics{color:var(--text-dim);font-size:12px;padding:16px;text-align:center}
+.cv-rubrics-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.cv-rubrics-header h3{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);font-weight:700;flex-shrink:0}
+.rubric-filters{display:flex;align-items:center;gap:10px;flex:1}
+.rubric-filters label{font-size:10px;color:var(--text-dim);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+.rubric-filters select{padding:4px 8px;border-radius:6px;font-size:11px;font-family:inherit;cursor:pointer;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:var(--text-sec);outline:none;transition:all .15s;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:22px}
+.rubric-filters select:hover{border-color:rgba(255,255,255,0.2)}
+.rubric-filters select:focus{border-color:var(--blue);background:rgba(255,255,255,0.06)}
+.rubric-filter-count{font-size:10px;color:var(--text-dim);flex-shrink:0}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.15)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .4s ease-out}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);color:var(--green);font-size:12px;font-weight:600;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+/* ═══ ONBOARDING TOUR ═══ */
+.tour-overlay{position:fixed;inset:0;z-index:900;pointer-events:none;opacity:0;transition:opacity .3s}
+.tour-overlay.active{opacity:1;pointer-events:auto}
+.tour-backdrop{position:fixed;inset:0;z-index:901}
+.tour-spotlight{position:fixed;z-index:902;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.75);transition:all .4s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.tour-tooltip{position:fixed;z-index:903;width:340px;padding:22px 24px;border-radius:14px;background:rgba(18,18,38,0.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 20px 60px rgba(0,0,0,0.5);transition:all .4s cubic-bezier(.4,0,.2,1)}
+.tour-tooltip.welcome{width:420px}
+.tour-step-num{font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px}
+.tour-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.3}
+.tour-desc{font-size:13px;color:var(--text-sec);line-height:1.6;margin-bottom:18px}
+.tour-desc strong{color:var(--text)}
+.tour-footer{display:flex;align-items:center;justify-content:space-between}
+.tour-dots{display:flex;gap:5px}
+.tour-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.12);transition:all .2s}
+.tour-dot.active{background:var(--blue);width:18px;border-radius:3px}
+.tour-btns{display:flex;gap:8px}
+.tour-btn{padding:8px 18px;cursor:pointer;font-size:12px;font-weight:600;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:transparent;color:var(--text-muted);font-family:inherit;transition:all .15s}
+.tour-btn:hover{color:var(--text-sec);border-color:rgba(255,255,255,0.2)}
+.tour-btn.primary{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none}
+.tour-btn.primary:hover{filter:brightness(1.1)}
+.tour-welcome-icon{font-size:36px;margin-bottom:12px;display:block}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+
+<div id="loading">
+  <div class="spinner"></div>
+  <div class="load-text">Loading trajectory data...</div>
+</div>
+
+<div id="app">
+  <div class="topbar" id="topbar"></div>
+  <div id="compare-view"></div>
+  <div id="model-view">
+    <div class="mv-body">
+      <div class="convo" id="convo"></div>
+      <div class="sidebar hidden" id="sidebar">
+        <div class="sidebar-tabs">
+          <div class="sidebar-tab active" data-pane="milestones" onclick="switchSidebarTab('milestones')">Milestones</div>
+          <div class="sidebar-tab" data-pane="saved" onclick="switchSidebarTab('saved')">Saved</div>
+        </div>
+        <div class="sidebar-content">
+          <div class="sidebar-pane active" id="pane-milestones"></div>
+          <div class="sidebar-pane" id="pane-saved"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="tour-overlay" id="tour-overlay">
+  <div class="tour-backdrop"></div>
+  <div class="tour-spotlight" id="tour-spotlight"></div>
+  <div class="tour-tooltip" id="tour-tooltip"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   STATE
+   ═══════════════════════════════════════════════════════════ */
+var STATE = {
+  task: null,
+  models: {},
+  modelOrder: [],
+  activeTab: 'compare',
+  allCollapsed: false,
+  rubrics: [],
+  isAdmin: false,
+  rubricFilterType: null,
+  rubricFilterMs: null,
+  savedTurns: []
+};
+var LABELS = {bash:'Bash',read:'Read',edit:'Edit',grep:'Grep',glob:'Glob',write:'Write',task:'Task',apply_patch:'Patch',question:'Ask',todowrite:'Todo',agent:'Agent'};
+
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 2000);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   INIT - Load from API
+   ═══════════════════════════════════════════════════════════ */
+(async function() {
+  // Check auth
+  var meRes = await fetch('/api/auth/me');
+  if (!meRes.ok) return window.location.href = '/login.html';
+  var me = await meRes.json();
+  STATE.isAdmin = me.isAdmin;
+
+  // Determine API paths based on role
+  var taskUrl = me.isAdmin ? null : '/api/user/task';
+  var rubricsUrl = me.isAdmin ? null : '/api/user/rubrics';
+
+  if (me.isAdmin) {
+    // Admin can also view - check URL for task ID
+    var params = new URLSearchParams(window.location.search);
+    var taskId = params.get('task');
+    if (!taskId) return window.location.href = '/admin.html';
+    taskUrl = '/api/admin/tasks/' + taskId;
+    rubricsUrl = null; // rubrics included in admin response
+  }
+
+  try {
+    var taskRes = await fetch(taskUrl);
+    if (!taskRes.ok) throw new Error('Failed to load task');
+    var data = await taskRes.json();
+
+    var task, trajectories, rubrics = [];
+    if (me.isAdmin) {
+      task = data.task;
+      trajectories = data.trajectories;
+      rubrics = data.rubrics || [];
+    } else {
+      task = data.task;
+      trajectories = data.trajectories;
+      // Fetch rubrics separately for users
+      var rubRes = await fetch(rubricsUrl);
+      if (rubRes.ok) rubrics = await rubRes.json();
+    }
+
+    // Parse task JSON
+    var taskData = null;
+    if (task.task_json) {
+      try { taskData = JSON.parse(task.task_json); } catch(e) {}
+    }
+    STATE.task = taskData;
+    STATE.rubrics = rubrics;
+
+    // Build models from trajectories
+    trajectories.forEach(function(t) {
+      var traj = null, opencode = null, milestoneProgressRaw = null;
+      if (t.trajectory_json) try { traj = JSON.parse(t.trajectory_json); } catch(e) {}
+      if (t.opencode_json) try { opencode = JSON.parse(t.opencode_json); } catch(e) {}
+      if (t.milestone_progress) milestoneProgressRaw = t.milestone_progress;
+
+      var model = { name: t.model_name, key: t.model_name, task: taskData, opencode: opencode };
+      model.turns = [];
+      if (traj && traj.turns) model.turns = traj.turns;
+      else if (opencode) model.turns = opencodeToTurns(opencode);
+      model.milestoneProgress = [];
+      // Prefer per-model milestone progress over task-level (task-level is shared across all models)
+      if (milestoneProgressRaw) {
+        if (typeof milestoneProgressRaw === 'string') model.milestoneProgress = parseMilestoneJSONL(milestoneProgressRaw);
+        else if (Array.isArray(milestoneProgressRaw)) model.milestoneProgress = milestoneProgressRaw;
+      } else if (taskData && taskData.milestone_progress && taskData.milestone_progress.length) {
+        model.milestoneProgress = taskData.milestone_progress;
+      }
+      model.metrics = computeMetrics(model);
+      STATE.models[t.model_name] = model;
+    });
+
+    STATE.modelOrder = Object.keys(STATE.models).sort();
+
+    // Show app
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    initApp();
+  } catch(err) {
+    document.querySelector('.load-text').textContent = 'Error: ' + err.message;
+  }
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   DATA PARSING
+   ═══════════════════════════════════════════════════════════ */
+function opencodeToTurns(oc) {
+  if (!oc || !oc.messages) return [];
+  var turns = [], num = 0;
+  oc.messages.forEach(function(msg) {
+    var role = (msg.info && msg.info.role) || msg.role;
+    if (role !== 'user' && role !== 'assistant') return;
+    num++;
+    var text = '';
+    (msg.parts || []).forEach(function(p) { if (p.type === 'text' && p.text) text += p.text + '\n'; });
+    turns.push({ turn_number: num, role: role, content: text.trim() });
+  });
+  return turns;
+}
+
+function parseMilestoneJSONL(text) {
+  var lines = text.trim().split('\n'), map = {};
+  lines.forEach(function(line) {
+    try {
+      var rec = JSON.parse(line), id = rec.milestone_id;
+      if (!map[id]) map[id] = { milestone_id: id, status: 'not_started' };
+      if (rec.status === 'in_progress' && !map[id].started_at_turn) { map[id].started_at_turn = rec.turn; map[id].status = 'in_progress'; }
+      if (rec.status === 'completed') { map[id].completed_at_turn = rec.turn; map[id].status = 'completed'; if (map[id].started_at_turn) map[id].turn_count = rec.turn - map[id].started_at_turn; }
+    } catch(e) {}
+  });
+  return Object.values(map);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   METRICS
+   ═══════════════════════════════════════════════════════════ */
+function computeMetrics(model) {
+  var task = model.task || STATE.task;
+  var milestones = task && task.user_intent ? (task.user_intent.milestones || []) : [];
+  var guardrails = task && task.user_intent ? (task.user_intent.guardrails || {}) : {};
+  var maxTurns = guardrails.max_turns || null;
+  var totalTurns = model.turns.length;
+  var userTurns = model.turns.filter(function(t) { return t.role === 'user'; }).length;
+  var asstTurns = model.turns.filter(function(t) { return t.role === 'assistant'; }).length;
+
+  var msTotal = milestones.length, msCompleted = 0, msDetails = [];
+  var mp = model.milestoneProgress || [];
+  milestones.forEach(function(ms) {
+    var prog = null;
+    mp.forEach(function(p) { if (p.milestone_id === ms.milestone_id) prog = p; });
+    var status = prog ? prog.status : 'not_started';
+    if (status === 'completed') msCompleted++;
+    msDetails.push({ id: ms.milestone_id, prompt: ms.prompt || '', criteria: ms.continuation_criteria || '', interactions: ms.planned_interactions_list || [], status: status, turnCount: prog ? prog.turn_count : null, startTurn: prog ? prog.started_at_turn : null, endTurn: prog ? prog.completed_at_turn : null });
+  });
+
+  var userTexts = model.turns.filter(function(t) { return t.role === 'user'; }).map(function(t) { return (t.content || '').toLowerCase(); });
+  var allTexts = model.turns.map(function(t) { return (t.content || '').toLowerCase(); });
+  var intTotal = 0, intMatched = 0, intDetails = [];
+  milestones.forEach(function(ms) {
+    (ms.planned_interactions_list || []).forEach(function(intr) {
+      intTotal++;
+      var matched = matchInteraction(intr, userTexts, allTexts);
+      if (matched) intMatched++;
+      intDetails.push({ trigger: intr.trigger, reaction: intr.reaction, milestone: ms.milestone_id, matched: matched });
+    });
+  });
+
+  return { totalTurns: totalTurns, userTurns: userTurns, asstTurns: asstTurns, maxTurns: maxTurns, exceedsMax: maxTurns && totalTurns > maxTurns, msTotal: msTotal, msCompleted: msCompleted, msDetails: msDetails, intTotal: intTotal, intMatched: intMatched, intDetails: intDetails };
+}
+
+function matchInteraction(intr, userTexts, allTexts) {
+  var reaction = (intr.reaction || '').toLowerCase();
+  var quotes = reaction.match(/"([^"]{4,})"/g) || [];
+  for (var q = 0; q < quotes.length; q++) {
+    var phrase = quotes[q].slice(1, -1);
+    for (var i = 0; i < userTexts.length; i++) if (userTexts[i].indexOf(phrase) !== -1) return true;
+    for (var j = 0; j < allTexts.length; j++) if (allTexts[j].indexOf(phrase) !== -1) return true;
+  }
+  var words = reaction.replace(/"[^"]*"/g, '').split(/\s+/).filter(function(w) { return w.length > 4 && 'about after again being could doing every first going their there these those through would should'.indexOf(w) === -1; });
+  if (words.length >= 4) {
+    for (var k = 0; k < userTexts.length; k++) {
+      var hits = 0; words.forEach(function(w) { if (userTexts[k].indexOf(w) !== -1) hits++; });
+      if (hits / words.length >= 0.5) return true;
+    }
+  }
+  return false;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOPBAR
+   ═══════════════════════════════════════════════════════════ */
+function initApp() {
+  loadSaved();
+  renderTopbar();
+  switchTab(STATE.modelOrder.length > 1 ? 'compare' : STATE.modelOrder[0]);
+  maybeAutoTour();
+}
+
+function renderTopbar() {
+  var task = STATE.task, html = '';
+  if (task) {
+    var g = (task.user_intent && task.user_intent.guardrails) || {};
+    var anyExceeds = STATE.modelOrder.some(function(mk) { return STATE.models[mk].metrics.exceedsMax; });
+    html += '<div class="task-title">';
+    html += '<span class="tt-name">ACC Data Annotation</span>';
+    html += '</div>';
+  }
+  html += '<div class="tabs">';
+  if (STATE.modelOrder.length > 1) html += '<div class="tab overview-tab' + (STATE.activeTab === 'compare' ? ' active' : '') + '" onclick="switchTab(\'compare\')">Overview</div>';
+  STATE.modelOrder.forEach(function(mk) {
+    var m = STATE.models[mk].metrics;
+    html += '<div class="tab' + (STATE.activeTab === mk ? ' active' : '') + '" data-model="' + mk + '" onclick="switchTab(\'' + mk + '\')">';
+    html += '<span class="t-status ' + (m.exceedsMax ? 't-warn' : 't-ok') + '"></span>' + esc(formatModelName(mk)) + '</div>';
+  });
+  html += '</div>';
+  html += '<div class="actions">';
+  html += '<button class="act-btn" onclick="startTour()">Guide</button>';
+  html += '<button class="act-btn" id="collapse-btn" onclick="toggleAllTurns()">Collapse all</button>';
+  html += '<button class="act-btn danger" onclick="logout()">Logout</button>';
+  html += '</div>';
+  document.getElementById('topbar').innerHTML = html;
+}
+
+function switchTab(tabId) {
+  STATE.activeTab = tabId; STATE.allCollapsed = false;
+  var btn = document.getElementById('collapse-btn'); if (btn) btn.textContent = 'Collapse all';
+  document.querySelectorAll('.tab').forEach(function(t) {
+    if (tabId === 'compare') t.classList.toggle('active', t.classList.contains('overview-tab'));
+    else t.classList.toggle('active', t.dataset && t.dataset.model === tabId);
+  });
+  var cv = document.getElementById('compare-view'), mv = document.getElementById('model-view');
+  if (tabId === 'compare') {
+    mv.style.display = 'none'; cv.style.display = 'block';
+    renderOverviewView();
+  } else {
+    cv.style.display = 'none'; mv.style.display = 'flex';
+    renderModelView(tabId);
+  }
+  var active = tabId === 'compare' ? cv : mv;
+  active.classList.remove('view-enter');
+  void active.offsetWidth;
+  active.classList.add('view-enter');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   COMPARE VIEW
+   ═══════════════════════════════════════════════════════════ */
+function renderOverviewView() {
+  var el = document.getElementById('compare-view');
+  var task = STATE.task, html = '<div class="fade-in">';
+
+  if (task) {
+    var g = (task.user_intent && task.user_intent.guardrails) || {};
+    var anyExceeds = STATE.modelOrder.some(function(mk) { return STATE.models[mk].metrics.exceedsMax; });
+    html += '<div class="cv-task-header glass">';
+    if (task.task_title) html += '<h2 class="cv-task-name">' + esc(task.task_title) + '</h2>';
+    var tags = '';
+    if (task.language) tags += '<span class="tt-badge tt-lang">' + esc(task.language) + '</span>';
+    if (task.difficulty) {
+      var dl = (task.difficulty || '').toLowerCase();
+      var dc = dl === 'easy' ? 'tt-easy' : dl === 'medium' ? 'tt-med' : 'tt-hard';
+      tags += '<span class="tt-badge ' + dc + '">' + esc(task.difficulty) + '</span>';
+    }
+    if (g.max_turns) tags += '<span class="tt-badge tt-turns' + (anyExceeds ? ' warn' : '') + '">Max ' + g.max_turns + ' turns</span>';
+    if (tags) html += '<div class="cv-task-tags">' + tags + '</div>';
+    if (task.problem_statement) {
+      html += '<details class="cv-problem-inner" open><summary>Problem Statement</summary>';
+      html += '<div class="cv-problem-text">' + esc(task.problem_statement) + '</div></details>';
+    }
+    html += '</div>';
+  }
+
+  html += '<div class="metric-grid">';
+  STATE.modelOrder.forEach(function(mk) { html += renderMetricCard(mk); });
+  html += '</div>';
+
+  var msKeys = getMilestoneIds();
+  if (msKeys.length) {
+    html += '<div class="cv-table-wrap glass">';
+    html += '<h3>Milestones</h3>';
+    html += '<table class="cv-table"><thead><tr><th></th>';
+    STATE.modelOrder.forEach(function(mk) { html += '<th>' + esc(formatModelName(mk)) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    msKeys.forEach(function(msId) {
+      html += '<tr><td>' + esc(msId.toUpperCase()) + '</td>';
+      STATE.modelOrder.forEach(function(mk) {
+        var detail = findMsDetail(mk, msId);
+        var cell = '';
+        if (detail && detail.status === 'completed') cell = '<span class="cell-pass">&#10003;</span><span class="cell-turns">' + (detail.turnCount != null ? detail.turnCount + ' turns' : '') + '</span>';
+        else if (detail && detail.status === 'in_progress') cell = '<span class="cell-wip">in progress</span>';
+        else cell = '<span class="cell-fail">&#10007;</span>';
+        html += '<td>' + cell + '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  // Rubrics section (task-level, shared across all trajectories)
+  html += '<div class="cv-rubrics-wrap glass">';
+
+  // Build filter options
+  var rubricTypes = [], rubricMs = [];
+  STATE.rubrics.forEach(function(r) {
+    var t = r.type || 'correctness';
+    if (rubricTypes.indexOf(t) === -1) rubricTypes.push(t);
+    if (r.milestone_id && rubricMs.indexOf(r.milestone_id) === -1) rubricMs.push(r.milestone_id);
+  });
+  rubricMs.sort();
+
+  var filtered = STATE.rubrics.filter(function(r) {
+    if (STATE.rubricFilterType && (r.type || 'correctness') !== STATE.rubricFilterType) return false;
+    if (STATE.rubricFilterMs && (r.milestone_id || '') !== STATE.rubricFilterMs) return false;
+    return true;
+  });
+
+  html += '<div class="cv-rubrics-header">';
+  html += '<h3>Evaluation Rubrics</h3>';
+  if (STATE.rubrics.length) {
+    html += '<div class="rubric-filters">';
+    html += '<label>Type</label>';
+    html += '<select onchange="toggleRubricFilter(\'type\',this.value)">';
+    html += '<option value="">All types</option>';
+    rubricTypes.forEach(function(t) {
+      html += '<option value="' + t + '"' + (STATE.rubricFilterType === t ? ' selected' : '') + '>' + t + '</option>';
+    });
+    html += '</select>';
+    html += '<label>Milestone</label>';
+    html += '<select onchange="toggleRubricFilter(\'ms\',this.value)">';
+    html += '<option value="">All milestones</option>';
+    rubricMs.forEach(function(ms) {
+      html += '<option value="' + esc(ms) + '"' + (STATE.rubricFilterMs === ms ? ' selected' : '') + '>' + esc(ms) + '</option>';
+    });
+    html += '</select>';
+    html += '</div>';
+    html += '<span class="rubric-filter-count">' + filtered.length + '/' + STATE.rubrics.length + '</span>';
+  }
+  html += '</div>';
+
+  if (filtered.length) {
+    html += '<div class="cv-rubric-list">';
+    filtered.forEach(function(r, i) {
+      var importClass = r.importance === 'MUST_FOLLOW' ? 'tag-must' : r.importance === 'GOOD_TO_HAVE' ? 'tag-good' : 'tag-universal';
+      html += '<div class="cv-rubric" id="cv-rubric-' + r.id + '">';
+      html += '<div class="cv-rubric-top">';
+      html += '<span class="cv-rubric-num">' + (i + 1) + '.</span>';
+      html += '<div style="flex:1">';
+      html += '<div class="cv-rubric-criterion">' + esc(r.criterion) + '</div>';
+      html += '<div class="cv-rubric-meta">';
+      if (r.milestone_id) html += '<span class="rubric-tag tag-milestone">' + esc(r.milestone_id) + '</span>';
+      html += '<span class="rubric-tag tag-type">' + (r.type || 'correctness') + '</span>';
+      html += '<span class="rubric-tag ' + importClass + '">' + r.importance + '</span>';
+      html += '<span class="rubric-tag ' + (r.is_positive ? 'tag-positive' : 'tag-negative') + '">' + (r.is_positive ? 'POSITIVE' : 'NEGATIVE') + '</span>';
+      html += '</div>';
+      if (r.rationale) html += '<div class="cv-rubric-rationale">' + esc(r.rationale) + '</div>';
+      html += '</div>';
+      html += '<div class="cv-rubric-actions">';
+      html += '<button onclick="copyRubric(\'' + r.id + '\')" title="Copy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
+      html += '<button onclick="editRubricInline(\'' + r.id + '\',true)">Edit</button>';
+      html += '<button onclick="deleteRubric(\'' + r.id + '\')" class="cv-rubric-del" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>';
+      html += '</div>';
+      html += '</div></div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="cv-no-rubrics">No rubrics yet. ' + (STATE.isAdmin ? 'Generate them from the <a href="/admin.html" style="color:var(--blue)">Admin panel</a>.' : 'Ask your admin to generate rubrics for this task.') + '</div>';
+  }
+  html += '</div>';
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function renderMetricCard(mk) {
+  var m = STATE.models[mk].metrics;
+  var colors = ['#6366f1','#3b82f6','#06b6d4','#8b5cf6','#ec4899'];
+  var dotColor = colors[STATE.modelOrder.indexOf(mk) % colors.length];
+  var msPct = m.msTotal ? Math.round(m.msCompleted / m.msTotal * 100) : 0;
+  var turnPct = m.maxTurns ? Math.min(Math.round(m.totalTurns / m.maxTurns * 100), 100) : 0;
+
+  var html = '<div class="metric-card glass" onclick="switchTab(\'' + mk + '\')">';
+  html += '<div class="mc-name"><span class="mc-dot" style="background:' + dotColor + '"></span>' + esc(formatModelName(mk)) + '</div>';
+  if (m.msTotal) {
+    html += '<div class="mc-row"><span class="mc-label">Milestones</span><span class="mc-value" style="color:var(--green)">' + m.msCompleted + ' / ' + m.msTotal + '</span></div>';
+    html += '<div class="progress-track"><div class="progress-fill pf-green" style="width:' + msPct + '%"></div></div>';
+  }
+  html += '<div class="mc-row"><span class="mc-label">Turns</span><span class="mc-value' + (m.exceedsMax ? '" style="color:var(--red)' : '') + '">' + m.totalTurns + (m.maxTurns ? ' / ' + m.maxTurns : '') + '</span></div>';
+  if (m.maxTurns) html += '<div class="progress-track"><div class="progress-fill ' + (m.exceedsMax ? 'pf-red' : 'pf-blue') + '" style="width:' + turnPct + '%"></div></div>';
+  html += '</div>';
+  return html;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MODEL VIEW
+   ═══════════════════════════════════════════════════════════ */
+function renderModelView(mk) {
+  var model = STATE.models[mk];
+  if (!model) return;
+  renderConversation(model);
+  renderSidebar(model);
+}
+
+function renderConversation(model) {
+  var el = document.getElementById('convo');
+  if (model.opencode && model.opencode.messages) renderConvoOpencode(el, model);
+  else renderConvoSimple(el, model);
+}
+
+function renderConvoSimple(el, model) {
+  var turns = model.turns, msMap = buildMsPromptMap(model);
+  if (!turns.length) { el.innerHTML = '<div style="padding:40px;color:var(--text-dim);text-align:center">No trajectory data</div>'; return; }
+  var groups = [], cur = null;
+  turns.forEach(function(t) {
+    if (t.role === 'user') { if (cur) groups.push(cur); cur = { user: t, assistants: [] }; }
+    else if (t.role === 'assistant') { if (!cur) cur = { user: null, assistants: [] }; cur.assistants.push(t); }
+  });
+  if (cur) groups.push(cur);
+  var html = '';
+  groups.forEach(function(g, idx) {
+    var userText = g.user ? (g.user.content || '(no content)') : '(no user prompt)';
+    var msId = msMap[idx];
+    var isSaved = STATE.savedTurns.some(function(s) { return s.modelKey === model.key && s.promptIdx === idx; });
+    html += '<div class="turn-group' + (msId ? ' ms-start' : '') + '" id="prompt-' + idx + '">';
+    html += '<div class="turn-header" onclick="toggleTurn(' + idx + ')">';
+    html += '<span class="arrow open" id="tarr_' + idx + '">&#9654;</span>';
+    html += '<span class="turn-num">Prompt ' + (idx + 1) + '</span>';
+    if (msId) html += '<span class="ms-badge">' + msId.toUpperCase() + '</span>';
+    html += '<span style="flex:1"></span>';
+    html += '<button class="save-turn-btn' + (isSaved ? ' saved' : '') + '" onclick="event.stopPropagation();toggleSaveTurn(\'' + esc(model.key) + '\',' + idx + ',\'' + esc(userText.slice(0, 80).replace(/'/g, '')) + '\')" title="' + (isSaved ? 'Unsave' : 'Save for review') + '">&#9733;</button>';
+    html += '</div>';
+    html += '<div class="turn-body open" id="tbody_' + idx + '">';
+    if (g.user) html += '<div class="msg-user"><div class="msg-user-label">User</div><div class="msg-user-text">' + esc(userText) + '</div></div>';
+    g.assistants.forEach(function(a) { html += '<div class="msg-asst"><div class="asst-text">' + esc(a.content || '(no response)') + '</div></div>'; });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function renderConvoOpencode(el, model) {
+  var msgs = model.opencode.messages;
+  if (!msgs || !msgs.length) { el.innerHTML = '<div style="padding:40px;color:var(--text-dim);text-align:center">No messages</div>'; return; }
+  var normalized = [];
+  msgs.forEach(function(m) {
+    var role = (m.info && m.info.role) || m.role;
+    if (role === 'user' || role === 'assistant') normalized.push({ role: role, parts: m.parts || [], raw: m });
+  });
+  var groups = [], cur = null, pidx = 0;
+  normalized.forEach(function(m) {
+    if (m.role === 'user') { if (cur) { cur.pidx = pidx++; groups.push(cur); } cur = { user: m, assistants: [] }; }
+    else { if (!cur) cur = { user: null, assistants: [] }; cur.assistants.push(m); }
+  });
+  if (cur) { cur.pidx = pidx; groups.push(cur); }
+
+  var msMap = buildMsPromptMap(model), html = '', stepNum = 0;
+  groups.forEach(function(g, idx) {
+    var userText = '';
+    if (g.user) (g.user.parts || []).forEach(function(p) { if (p.type === 'text' && p.text) userText += p.text + '\n'; });
+    userText = userText.trim();
+    var msId = msMap[idx];
+
+    var isSaved = STATE.savedTurns.some(function(s) { return s.modelKey === model.key && s.promptIdx === idx; });
+    html += '<div class="turn-group' + (msId ? ' ms-start' : '') + '" id="prompt-' + idx + '">';
+    html += '<div class="turn-header" onclick="toggleTurn(' + idx + ')">';
+    html += '<span class="arrow open" id="tarr_' + idx + '">&#9654;</span>';
+    html += '<span class="turn-num">Prompt ' + (idx + 1) + '</span>';
+    if (msId) html += '<span class="ms-badge">' + msId.toUpperCase() + '</span>';
+    html += '<span style="flex:1"></span>';
+    html += '<button class="save-turn-btn' + (isSaved ? ' saved' : '') + '" onclick="event.stopPropagation();toggleSaveTurn(\'' + esc(model.key) + '\',' + idx + ',\'' + esc((userText || '').slice(0, 80).replace(/'/g, '')) + '\')" title="' + (isSaved ? 'Unsave' : 'Save for review') + '">&#9733;</button>';
+    html += '</div>';
+    html += '<div class="turn-body open" id="tbody_' + idx + '">';
+    if (g.user && userText) html += '<div class="msg-user"><div class="msg-user-label">User</div><div class="msg-user-text">' + esc(userText) + '</div></div>';
+
+    g.assistants.forEach(function(msg) {
+      html += '<div class="msg-asst">';
+      var hasContent = false;
+      (msg.parts || []).forEach(function(p) {
+        if (p.type === 'step-start') { stepNum++; html += '<div class="step-header">Step ' + stepNum + '</div>'; }
+        else if (p.type === 'text' && p.text && p.text.trim()) { hasContent = true; html += '<div class="asst-text">' + esc(p.text.trim()) + '</div>'; }
+        else if (p.type === 'tool') { hasContent = true; html += renderToolBlock(p); }
+      });
+      if (!hasContent) html += '<div class="empty-resp">(no visible content)</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOOL BLOCKS
+   ═══════════════════════════════════════════════════════════ */
+function renderToolBlock(p) {
+  var tn = p.tool || 'tool', st = p.state || {}, inp = st.input || {}, out = st.output || '', meta = st.metadata || {}, time = st.time || {};
+  var dur = time.start && time.end ? ((time.end - time.start) / 1000).toFixed(1) + 's' : '';
+  var title = st.title || toolLabel(tn, inp);
+  var id = 't_' + Math.random().toString(36).slice(2, 8);
+  var html = '<div class="tool-block tbl-' + tn + '"><div class="tool-header" onclick="toggleTool(\'' + id + '\')">';
+  html += '<span class="arrow" id="arr_' + id + '">&#9654;</span>';
+  html += '<span class="tool-badge tb-' + tn + '">' + (LABELS[tn] || tn) + '</span>';
+  html += '<span class="tool-title">' + esc(title) + '</span>';
+  if (dur) html += '<span class="tool-dur">' + dur + '</span>';
+  html += '</div><div class="tool-body" id="' + id + '">';
+
+  if (tn === 'edit' || tn === 'apply_patch') {
+    var old = inp.oldString || inp.old_string || '', nw = inp.newString || inp.new_string || '', file = inp.filePath || inp.file_path || inp.path || '';
+    if (file) html += '<div style="color:var(--text-muted);font-size:11px;margin-bottom:6px;font-family:var(--mono)">' + esc(file) + '</div>';
+    if (old || nw) {
+      html += '<div class="diff">';
+      if (old) old.split('\n').forEach(function(l) { html += '<span class="del">- ' + esc(l) + '</span>'; });
+      if (nw) nw.split('\n').forEach(function(l) { html += '<span class="add">+ ' + esc(l) + '</span>'; });
+      html += '</div>';
+    } else if (out) html += '<div class="codeblock">' + esc(trunc(out, 3000)) + '</div>';
+  } else if (tn === 'bash') {
+    var cmd = inp.command || inp.description || '';
+    if (cmd) html += '<div class="codeblock"><span class="cmd">$ ' + esc(cmd) + '</span></div>';
+    if (out) html += '<div class="codeblock"><span class="out">' + esc(trunc(out, 3000)) + '</span></div>';
+    if (meta.exit !== undefined) html += '<div style="color:' + (meta.exit === 0 ? 'var(--green)' : 'var(--red)') + ';font-size:11px;margin-top:4px">exit ' + meta.exit + '</div>';
+  } else if (tn === 'read') {
+    var fp = inp.filePath || inp.file_path || inp.path || '';
+    if (fp) html += '<div style="color:var(--text-muted);font-size:11px;margin-bottom:4px;font-family:var(--mono)">' + esc(fp) + '</div>';
+    if (out) html += '<div class="codeblock">' + esc(trunc(out, 3000)) + '</div>';
+  } else if (tn === 'grep') {
+    html += '<div style="color:var(--text-muted);font-size:11px;margin-bottom:4px">pattern: <b style="color:var(--purple)">' + esc(inp.pattern || '') + '</b></div>';
+    if (out) html += '<div class="codeblock">' + esc(trunc(out, 2000)) + '</div>';
+  } else {
+    var is = JSON.stringify(inp, null, 2);
+    if (is && is !== '{}') html += '<div class="codeblock">' + esc(is) + '</div>';
+    if (out) html += '<div class="codeblock">' + esc(trunc(out, 2000)) + '</div>';
+  }
+  html += '</div></div>';
+  return html;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SIDEBAR (Milestones + Saved)
+   ═══════════════════════════════════════════════════════════ */
+function renderSidebar(model) {
+  var sidebar = document.getElementById('sidebar');
+  var m = model.metrics;
+  var hasMs = m.msDetails.length > 0;
+
+  sidebar.classList.remove('hidden');
+
+  // Milestones pane
+  var msHtml = '';
+  if (hasMs) {
+    msHtml = '<h3>Milestones (' + m.msCompleted + '/' + m.msTotal + ')</h3>';
+    m.msDetails.forEach(function(ms) {
+      var sc = ms.status === 'completed' ? 'ms-done' : ms.status === 'in_progress' ? 'ms-active' : 'ms-pending';
+      var promptIdx = msPromptToIdx(model, ms.prompt);
+      msHtml += '<div class="ms-card ' + sc + '" onclick="jumpToPrompt(' + promptIdx + ')">';
+      msHtml += '<div class="ms-head"><span class="ms-id">' + ms.id.toUpperCase() + '</span>';
+      msHtml += '<span class="ms-status ms-status-' + ms.status + '">' + ms.status.replace('_', ' ') + '</span></div>';
+      msHtml += '<div class="ms-prompt">' + esc(ms.prompt) + '</div>';
+      msHtml += '</div>';
+    });
+  } else {
+    msHtml = '<div style="color:var(--text-dim);font-size:12px;padding:16px;text-align:center">No milestones</div>';
+  }
+  document.getElementById('pane-milestones').innerHTML = msHtml;
+
+  // Saved pane
+  renderSavedPane();
+}
+
+function renderSavedPane() {
+  var html = '';
+  if (STATE.savedTurns.length) {
+    html = '<h3 style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);padding:4px 6px;margin-bottom:6px;font-weight:700">Saved Turns (' + STATE.savedTurns.length + ')</h3>';
+    STATE.savedTurns.forEach(function(s, i) {
+      html += '<div class="saved-card" onclick="goToSavedTurn(' + i + ')">';
+      html += '<div class="saved-head">';
+      html += '<span class="saved-model">' + esc(formatModelName(s.modelKey)) + '</span>';
+      html += '<span class="saved-prompt">Prompt ' + (s.promptIdx + 1) + '</span>';
+      html += '<button class="saved-remove" onclick="event.stopPropagation();removeSavedTurn(' + i + ')" title="Remove">&#10005;</button>';
+      html += '</div>';
+      html += '<div class="saved-preview">' + esc(s.preview) + '</div>';
+      if (s.note) html += '<div class="saved-note">' + esc(s.note) + '</div>';
+      html += '</div>';
+    });
+    html += '<div style="padding:6px;text-align:center"><button class="saved-clear-btn" onclick="clearAllSaved()">Clear all</button></div>';
+  } else {
+    html = '<div style="color:var(--text-dim);font-size:12px;padding:16px;text-align:center">No saved turns yet.<br><span style="font-size:11px;color:var(--text-dim);margin-top:4px;display:inline-block">Click the bookmark icon on any turn to save it for review.</span></div>';
+  }
+  document.getElementById('pane-saved').innerHTML = html;
+}
+
+function switchSidebarTab(pane) {
+  document.querySelectorAll('.sidebar-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.pane === pane); });
+  document.querySelectorAll('.sidebar-pane').forEach(function(p) { p.classList.toggle('active', p.id === 'pane-' + pane); });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RUBRIC EDITING
+   ═══════════════════════════════════════════════════════════ */
+function editRubricInline(id, fromOverview) {
+  var r = STATE.rubrics.find(function(x) { return x.id === id; });
+  if (!r) return;
+  var el = fromOverview ? document.getElementById('cv-rubric-' + id) : document.getElementById('vrubric-' + id);
+  if (!el) return;
+  var cancelFn = 'renderOverviewView()';
+  var html = '<div class="rubric-edit" style="' + (fromOverview ? 'margin-bottom:8px' : '') + '">';
+  html += '<textarea id="re-crit-' + id + '">' + esc(r.criterion) + '</textarea>';
+  html += '<div class="re-row">';
+  html += '<select id="re-imp-' + id + '"><option value="MUST_FOLLOW"' + (r.importance === 'MUST_FOLLOW' ? ' selected' : '') + '>MUST_FOLLOW</option><option value="GOOD_TO_HAVE"' + (r.importance === 'GOOD_TO_HAVE' ? ' selected' : '') + '>GOOD_TO_HAVE</option><option value="UNIVERSAL"' + (r.importance === 'UNIVERSAL' ? ' selected' : '') + '>UNIVERSAL</option></select>';
+  html += '<select id="re-pos-' + id + '"><option value="1"' + (r.is_positive ? ' selected' : '') + '>Positive</option><option value="0"' + (!r.is_positive ? ' selected' : '') + '>Negative</option></select>';
+  html += '</div>';
+  html += '<div class="re-actions">';
+  html += '<button class="re-btn save" onclick="saveRubricEdit(\'' + id + '\',' + !!fromOverview + ')">Save</button>';
+  html += '<button class="re-btn" onclick="' + cancelFn + '">Cancel</button>';
+  html += '</div></div>';
+  el.outerHTML = html;
+}
+
+async function saveRubricEdit(id, fromOverview) {
+  var criterion = document.getElementById('re-crit-' + id).value.trim();
+  var importance = document.getElementById('re-imp-' + id).value;
+  var isPositive = document.getElementById('re-pos-' + id).value === '1';
+
+  var apiBase = STATE.isAdmin ? '/api/admin' : '/api/user';
+  await fetch(apiBase + '/rubrics/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ criterion: criterion, importance: importance, is_positive: isPositive })
+  });
+
+  // Update local state
+  var r = STATE.rubrics.find(function(x) { return x.id === id; });
+  if (r) { r.criterion = criterion; r.importance = importance; r.is_positive = isPositive; }
+  toast('Rubric updated');
+  if (fromOverview) renderOverviewView();
+  else renderOverviewView();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UI HELPERS
+   ═══════════════════════════════════════════════════════════ */
+function toggleTurn(idx) {
+  var b = document.getElementById('tbody_' + idx), a = document.getElementById('tarr_' + idx);
+  if (b) { b.classList.toggle('open'); if (a) a.classList.toggle('open'); }
+}
+function toggleTool(id) {
+  var b = document.getElementById(id), a = document.getElementById('arr_' + id);
+  if (b) { b.classList.toggle('open'); if (a) a.classList.toggle('open'); }
+}
+function toggleAllTurns() {
+  STATE.allCollapsed = !STATE.allCollapsed;
+  document.querySelectorAll('.turn-body').forEach(function(b) { b.classList.toggle('open', !STATE.allCollapsed); });
+  document.querySelectorAll('.turn-header .arrow').forEach(function(a) { a.classList.toggle('open', !STATE.allCollapsed); });
+  var btn = document.getElementById('collapse-btn');
+  if (btn) btn.textContent = STATE.allCollapsed ? 'Expand all' : 'Collapse all';
+}
+function jumpToPrompt(idx) {
+  var target = document.getElementById('prompt-' + idx);
+  if (!target) return;
+  var body = document.getElementById('tbody_' + idx), arr = document.getElementById('tarr_' + idx);
+  if (body && !body.classList.contains('open')) { body.classList.add('open'); if (arr) arr.classList.add('open'); }
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function toggleRubricFilter(kind, value) {
+  if (kind === 'type') { STATE.rubricFilterType = value || null; }
+  else if (kind === 'ms') { STATE.rubricFilterMs = value || null; }
+  renderOverviewView();
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SAVED TURNS
+   ═══════════════════════════════════════════════════════════ */
+function toggleSaveTurn(modelKey, promptIdx, preview) {
+  var existing = STATE.savedTurns.findIndex(function(s) { return s.modelKey === modelKey && s.promptIdx === promptIdx; });
+  if (existing >= 0) {
+    STATE.savedTurns.splice(existing, 1);
+    toast('Unsaved');
+  } else {
+    var note = prompt('Add a note (optional):') || '';
+    STATE.savedTurns.push({ modelKey: modelKey, promptIdx: promptIdx, preview: preview, note: note });
+    toast('Saved for review');
+  }
+  persistSaved();
+  var btn = document.querySelector('#prompt-' + promptIdx + ' .save-turn-btn');
+  if (btn) {
+    var isSaved = existing < 0;
+    btn.classList.toggle('saved', isSaved);
+    btn.title = isSaved ? 'Unsave' : 'Save for review';
+  }
+  renderSavedPane();
+}
+
+function removeSavedTurn(index) {
+  STATE.savedTurns.splice(index, 1);
+  persistSaved();
+  renderSavedPane();
+  // Update button if visible
+  renderConversation(STATE.models[STATE.activeTab]);
+}
+
+function clearAllSaved() {
+  STATE.savedTurns = [];
+  persistSaved();
+  renderSavedPane();
+  if (STATE.activeTab !== 'compare') renderConversation(STATE.models[STATE.activeTab]);
+}
+
+function goToSavedTurn(index) {
+  var s = STATE.savedTurns[index];
+  if (!s) return;
+  // Switch to the model tab first, then jump to the prompt
+  switchTab(s.modelKey);
+  setTimeout(function() { jumpToPrompt(s.promptIdx); }, 100);
+}
+
+function persistSaved() {
+  var taskId = STATE.task && STATE.task.id ? STATE.task.id : 'default';
+  try { localStorage.setItem('savedTurns_' + taskId, JSON.stringify(STATE.savedTurns)); } catch(e) {}
+}
+
+function loadSaved() {
+  var taskId = STATE.task && STATE.task.id ? STATE.task.id : 'default';
+  try {
+    var raw = localStorage.getItem('savedTurns_' + taskId);
+    if (raw) STATE.savedTurns = JSON.parse(raw);
+  } catch(e) {}
+}
+
+function copyRubric(id) {
+  var r = STATE.rubrics.find(function(x) { return x.id === id; });
+  if (!r) return;
+  navigator.clipboard.writeText(r.criterion).then(function() { toast('Copied!'); });
+}
+
+async function deleteRubric(id) {
+  if (!confirm('Delete this rubric?')) return;
+  var apiBase = STATE.isAdmin ? '/api/admin' : '/api/user';
+  var res = await fetch(apiBase + '/rubrics/' + id, { method: 'DELETE' });
+  if (!res.ok) { toast('Failed to delete'); return; }
+  STATE.rubrics = STATE.rubrics.filter(function(r) { return r.id !== id; });
+  toast('Rubric deleted');
+  renderOverviewView();
+}
+
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DATA HELPERS
+   ═══════════════════════════════════════════════════════════ */
+function msPromptToIdx(model, msPrompt) {
+  if (!msPrompt) return -1;
+  var needle = msPrompt.toLowerCase().replace(/\s+/g, ' ').trim();
+  var sig = needle.slice(0, 80);
+  var bestIdx = -1, bestScore = 0, promptIdx = 0;
+  for (var i = 0; i < model.turns.length; i++) {
+    if (model.turns[i].role !== 'user') continue;
+    var hay = (model.turns[i].content || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    if (hay.indexOf(sig) !== -1) return promptIdx;
+    var words = sig.split(' ').filter(function(w) { return w.length > 3; });
+    if (words.length) {
+      var hits = 0;
+      words.forEach(function(w) { if (hay.indexOf(w) !== -1) hits++; });
+      var score = hits / words.length;
+      if (score > bestScore) { bestScore = score; bestIdx = promptIdx; }
+    }
+    promptIdx++;
+  }
+  // Require at least 40% word overlap for fuzzy match
+  return bestScore >= 0.4 ? bestIdx : -1;
+}
+function buildMsPromptMap(model) {
+  var map = {};
+  var used = {};
+  (model.metrics.msDetails || []).forEach(function(ms) {
+    var idx = msPromptToIdx(model, ms.prompt);
+    if (idx >= 0 && !used[idx]) { map[idx] = ms.id; used[idx] = true; }
+  });
+  return map;
+}
+function getMilestoneIds() {
+  var ids = [];
+  STATE.modelOrder.forEach(function(mk) {
+    STATE.models[mk].metrics.msDetails.forEach(function(ms) { if (ids.indexOf(ms.id) === -1) ids.push(ms.id); });
+  });
+  return ids.sort();
+}
+function findMsDetail(mk, msId) {
+  var ds = STATE.models[mk].metrics.msDetails;
+  for (var i = 0; i < ds.length; i++) if (ds[i].id === msId) return ds[i];
+  return null;
+}
+function getIntsForMs(mk, msId) {
+  var ds = STATE.models[mk].metrics.intDetails, matched = 0, total = 0;
+  ds.forEach(function(d) { if (d.milestone === msId) { total++; if (d.matched) matched++; } });
+  return { matched: matched, total: total };
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UTILITIES
+   ═══════════════════════════════════════════════════════════ */
+function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function trunc(s, n) { if (!s) return ''; s = String(s).trim(); return s.length > n ? s.slice(0, n) + '\n\u2026 (truncated)' : s; }
+function formatModelName(dir) {
+  var n = dir.replace(/^vm-/, '');
+  n = n.replace(/-(\d+)-(\d+)/g, ' $1.$2').replace(/-/g, ' ');
+  n = n.replace(/\b\w/g, function(c) { return c.toUpperCase(); });
+  n = n.replace(/\bGpt\b/g, 'GPT').replace(/\s+Preview$/i, '');
+  return n;
+}
+function toolLabel(tn, inp) {
+  if (tn === 'bash') return inp.description || (inp.command ? inp.command.slice(0, 60) : '') || 'bash';
+  if (tn === 'read') return (inp.filePath || inp.file_path || inp.path || '').split('/').pop() || 'read';
+  if (tn === 'edit' || tn === 'apply_patch') return (inp.filePath || inp.file_path || inp.path || '').split('/').pop() || 'edit';
+  if (tn === 'write') return (inp.filePath || inp.file_path || inp.path || '').split('/').pop() || 'write';
+  if (tn === 'grep') return 'grep: ' + (inp.pattern || '').slice(0, 40);
+  if (tn === 'glob') return 'glob: ' + (inp.pattern || inp.glob_pattern || '').slice(0, 40);
+  return tn;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ONBOARDING TOUR
+   ═══════════════════════════════════════════════════════════ */
+var TOUR_STEPS = [
+  {
+    type: 'welcome',
+    title: 'Welcome to the Trajectory Viewer',
+    desc: 'This tool lets you <strong>review and compare AI coding agent trajectories</strong> across different models. You\'ll evaluate how each model performed on a task using milestones and rubrics.<br><br>Let\'s walk through the key parts of the interface.'
+  },
+  {
+    selector: '.cv-task-header',
+    title: 'Task & Problem Statement',
+    desc: 'Start here. The <strong>task name</strong> and <strong>problem statement</strong> describe what the AI agents were asked to do. Read this first to understand what you\'re evaluating.',
+    position: 'bottom'
+  },
+  {
+    selector: '.metric-grid',
+    title: 'Model Comparison Cards',
+    desc: 'Each card summarizes a model\'s performance at a glance — <strong>milestone completion, turn count, and whether it stayed within limits</strong>. Click any card to jump into that model\'s full conversation.',
+    position: 'bottom'
+  },
+  {
+    selector: '.cv-table-wrap',
+    title: 'Milestone Table',
+    desc: 'See which milestones each model completed, is working on, or missed. This gives you a <strong>quick side-by-side comparison</strong> without reading full trajectories.',
+    position: 'bottom'
+  },
+  {
+    selector: '.cv-rubrics-wrap',
+    title: 'Evaluation Rubrics',
+    desc: 'Rubrics are the <strong>grading criteria</strong> for the task — shared across all models. Each rubric is tied to a milestone and type (correctness, communication, behavior, code style). You can <strong>filter, edit, and copy</strong> them.',
+    position: 'top'
+  },
+  {
+    selector: '.rubric-filters',
+    title: 'Rubric Filters',
+    desc: 'Use these dropdowns to <strong>filter rubrics by type or milestone</strong>. Helps you focus on a specific aspect of the evaluation.',
+    position: 'bottom'
+  },
+  {
+    selector: '.tabs',
+    title: 'Model Tabs',
+    desc: 'Switch between the <strong>Overview view</strong> and individual <strong>model views</strong>. Each model tab shows the full conversation — every prompt, response, and tool call.',
+    position: 'bottom'
+  },
+  {
+    type: 'action',
+    action: function() {
+      if (STATE.modelOrder.length) switchTab(STATE.modelOrder[0]);
+    },
+    delay: 400,
+    selector: '.turn-header',
+    title: 'Conversation Turns',
+    desc: 'Each turn shows a <strong>user prompt</strong> and the model\'s response. Click the header to expand/collapse. Look for the <strong>purple milestone badges</strong> to see which turns correspond to which milestones.',
+    position: 'bottom'
+  },
+  {
+    selector: '.save-turn-btn',
+    title: 'Save Turns for Review',
+    desc: 'See the <strong>star icon</strong>? Click it to bookmark any turn for deeper review later. Saved turns persist across page refreshes so you won\'t lose track.',
+    position: 'left'
+  },
+  {
+    selector: '#sidebar',
+    title: 'Sidebar: Milestones & Saved',
+    desc: 'The <strong>Milestones tab</strong> shows milestone details — click any to jump to that prompt. The <strong>Saved tab</strong> collects all your bookmarked turns. Click a saved item to jump straight to it.',
+    position: 'left'
+  }
+];
+
+var tourState = { active: false, step: 0 };
+
+function startTour() {
+  tourState = { active: true, step: 0 };
+  // Make sure we're on compare view for the first steps
+  if (STATE.activeTab !== 'compare' && STATE.modelOrder.length > 1) switchTab('compare');
+  document.getElementById('tour-overlay').classList.add('active');
+  setTimeout(function() { showTourStep(0); }, 200);
+}
+
+function showTourStep(idx) {
+  tourState.step = idx;
+  var step = TOUR_STEPS[idx];
+  if (!step) { endTour(); return; }
+
+  var overlay = document.getElementById('tour-overlay');
+  var spotlight = document.getElementById('tour-spotlight');
+  var tooltip = document.getElementById('tour-tooltip');
+
+  // Run action if needed (like switching tabs)
+  if (step.action) {
+    step.action();
+    if (step.delay) {
+      setTimeout(function() { positionTourStep(step, idx, spotlight, tooltip); }, step.delay);
+      return;
+    }
+  }
+  positionTourStep(step, idx, spotlight, tooltip);
+}
+
+function positionTourStep(step, idx, spotlight, tooltip) {
+  var total = TOUR_STEPS.length;
+  var isFirst = idx === 0;
+  var isLast = idx === total - 1;
+
+  // Build tooltip content
+  var html = '';
+  if (step.type === 'welcome') {
+    html += '<span class="tour-welcome-icon">&#128075;</span>';
+  } else {
+    html += '<div class="tour-step-num">Step ' + idx + ' of ' + (total - 1) + '</div>';
+  }
+  html += '<div class="tour-title">' + step.title + '</div>';
+  html += '<div class="tour-desc">' + step.desc + '</div>';
+  html += '<div class="tour-footer">';
+  html += '<div class="tour-dots">';
+  for (var i = 0; i < total; i++) {
+    html += '<div class="tour-dot' + (i === idx ? ' active' : '') + '"></div>';
+  }
+  html += '</div>';
+  html += '<div class="tour-btns">';
+  html += '<button class="tour-btn" onclick="endTour()">' + (isFirst ? 'Skip' : 'End tour') + '</button>';
+  html += '<button class="tour-btn primary" onclick="nextTourStep()">' + (isFirst ? 'Start tour' : isLast ? 'Done' : 'Next') + '</button>';
+  html += '</div></div>';
+
+  tooltip.className = 'tour-tooltip' + (step.type === 'welcome' ? ' welcome' : '');
+  tooltip.innerHTML = html;
+
+  if (step.type === 'welcome' || !step.selector) {
+    // Center on screen, no spotlight
+    spotlight.style.opacity = '0';
+    tooltip.style.left = '50%';
+    tooltip.style.top = '50%';
+    tooltip.style.transform = 'translate(-50%, -50%)';
+    return;
+  }
+
+  // Find element
+  var el = document.querySelector(step.selector);
+  if (!el) { nextTourStep(); return; }
+
+  // Scroll into view if needed
+  el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  setTimeout(function() {
+    var rect = el.getBoundingClientRect();
+    var pad = 8;
+
+    // Position spotlight
+    spotlight.style.opacity = '1';
+    spotlight.style.left = (rect.left - pad) + 'px';
+    spotlight.style.top = (rect.top - pad) + 'px';
+    spotlight.style.width = (rect.width + pad * 2) + 'px';
+    spotlight.style.height = (rect.height + pad * 2) + 'px';
+
+    // Position tooltip
+    tooltip.style.transform = 'none';
+    var tw = 340, th = tooltip.offsetHeight;
+    var pos = step.position || 'bottom';
+    var left, top;
+
+    if (pos === 'bottom') {
+      left = rect.left + rect.width / 2 - tw / 2;
+      top = rect.bottom + pad + 12;
+    } else if (pos === 'top') {
+      left = rect.left + rect.width / 2 - tw / 2;
+      top = rect.top - pad - th - 12;
+    } else if (pos === 'left') {
+      left = rect.left - tw - pad - 12;
+      top = rect.top + rect.height / 2 - th / 2;
+    } else {
+      left = rect.right + pad + 12;
+      top = rect.top + rect.height / 2 - th / 2;
+    }
+
+    // Clamp to viewport
+    left = Math.max(12, Math.min(left, window.innerWidth - tw - 12));
+    top = Math.max(12, Math.min(top, window.innerHeight - th - 12));
+
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  }, 150);
+}
+
+function nextTourStep() {
+  if (tourState.step >= TOUR_STEPS.length - 1) { endTour(); return; }
+  showTourStep(tourState.step + 1);
+}
+
+function endTour() {
+  tourState.active = false;
+  document.getElementById('tour-overlay').classList.remove('active');
+  // Go back to compare view if we navigated away
+  if (STATE.activeTab !== 'compare' && STATE.modelOrder.length > 1) switchTab('compare');
+  try { localStorage.setItem('tour_completed', '1'); } catch(e) {}
+}
+
+// Auto-start tour on first visit
+function maybeAutoTour() {
+  try {
+    if (!localStorage.getItem('tour_completed')) {
+      setTimeout(startTour, 600);
+    }
+  } catch(e) {}
+}
+
+document.addEventListener('keydown', function(e) {
+  if (!tourState.active) return;
+  if (e.key === 'Escape') endTour();
+  else if (e.key === 'ArrowRight' || e.key === 'Enter') nextTourStep();
+  else if (e.key === 'ArrowLeft' && tourState.step > 0) showTourStep(tourState.step - 1);
+});
+</script>
+</body>
+</html>

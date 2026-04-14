@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Trajectory Viewer</title>
+<style>
+:root {
+  --bg: #06060e;
+  --glass: rgba(255,255,255,0.035);
+  --glass-border: rgba(255,255,255,0.07);
+  --glass-hover: rgba(255,255,255,0.06);
+  --glass-hover-border: rgba(255,255,255,0.12);
+  --text: #e2e8f0;
+  --text-sec: #94a3b8;
+  --text-muted: #64748b;
+  --text-dim: #334155;
+  --blue: #60a5fa;
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --cyan: #22d3ee;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --mono: 'SF Mono','Cascadia Code','Fira Code',Consolas,monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;position:relative}
+
+.bg-orbs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(100px)}
+.orb-1{width:700px;height:700px;background:rgba(99,102,241,0.07);top:-15%;left:5%;animation:f1 25s ease-in-out infinite}
+.orb-2{width:500px;height:500px;background:rgba(139,92,246,0.05);bottom:0;right:5%;animation:f2 30s ease-in-out infinite}
+.orb-3{width:400px;height:400px;background:rgba(14,165,233,0.04);top:40%;left:45%;animation:f3 20s ease-in-out infinite}
+@keyframes f1{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,40px)}}
+@keyframes f2{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,-50px)}}
+@keyframes f3{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}
+
+.glass{background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.03)}
+
+/* TOPBAR */
+.topbar{position:relative;z-index:10;background:rgba(8,8,22,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border);padding:0 24px;display:flex;align-items:center;height:50px}
+.topbar h1{font-size:15px;font-weight:700;background:linear-gradient(135deg,#e2e8f0,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar .spacer{flex:1}
+.topbar .act-btn{padding:6px 14px;cursor:pointer;color:var(--text-muted);font-size:11px;border:1px solid var(--glass-border);border-radius:7px;background:transparent;font-family:inherit;transition:all .15s;margin-left:8px}
+.topbar .act-btn:hover{color:var(--text-sec);border-color:var(--glass-hover-border);background:rgba(255,255,255,0.03)}
+.topbar .act-btn.danger:hover{color:var(--red);border-color:rgba(248,113,113,0.2)}
+
+/* CONTENT */
+.content{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 24px}
+
+/* UPLOAD ZONE */
+.upload-zone{padding:40px;text-align:center;border:2px dashed rgba(255,255,255,0.08);border-radius:20px;cursor:pointer;transition:all .3s;background:rgba(255,255,255,0.015);margin-bottom:24px}
+.upload-zone:hover,.upload-zone.over{border-color:var(--blue);background:rgba(96,165,250,0.03)}
+.upload-zone .uz-icon{font-size:32px;margin-bottom:8px;opacity:0.5}
+.upload-zone h2{color:var(--text-sec);font-size:14px;font-weight:600;margin-bottom:4px}
+.upload-zone p{color:var(--text-muted);font-size:11px;line-height:1.6}
+input[type=file]{display:none}
+
+/* TASK LIST */
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:12px;font-weight:700}
+.task-list{display:flex;flex-direction:column;gap:10px;margin-bottom:24px}
+.task-card{padding:16px 20px;transition:all .15s;cursor:pointer;display:flex;align-items:center;gap:16px}
+.task-card:hover{border-color:var(--glass-hover-border);background:var(--glass-hover)}
+.task-name{font-size:14px;font-weight:700;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-meta{display:flex;gap:12px;align-items:center;flex-shrink:0}
+.task-badge{padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;background:rgba(255,255,255,0.04);color:var(--text-sec);border:1px solid rgba(255,255,255,0.04);white-space:nowrap}
+.task-badge.has-rubrics{color:var(--green);background:rgba(74,222,128,0.08);border-color:rgba(74,222,128,0.15)}
+.task-creds{font-size:11px;color:var(--text-muted);font-family:var(--mono)}
+.task-delete{padding:4px 10px;cursor:pointer;color:var(--text-dim);font-size:11px;border:1px solid transparent;border-radius:6px;background:transparent;font-family:inherit;transition:all .15s}
+.task-delete:hover{color:var(--red);border-color:rgba(248,113,113,0.2);background:rgba(248,113,113,0.04)}
+
+/* TASK DETAIL */
+#task-detail{display:none}
+.back-btn{padding:6px 14px;cursor:pointer;color:var(--text-muted);font-size:11px;border:1px solid var(--glass-border);border-radius:7px;background:transparent;font-family:inherit;transition:all .15s;margin-bottom:16px}
+.back-btn:hover{color:var(--text-sec);border-color:var(--glass-hover-border)}
+.detail-header{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.detail-header h2{font-size:18px;font-weight:700;flex:1}
+.detail-header .act-btn{padding:6px 14px;cursor:pointer;color:var(--text-muted);font-size:11px;border:1px solid var(--glass-border);border-radius:7px;background:transparent;font-family:inherit;transition:all .15s}
+.detail-header .act-btn:hover{color:var(--text-sec);border-color:var(--glass-hover-border)}
+.detail-header .act-btn.primary{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none;box-shadow:0 2px 12px rgba(99,102,241,0.25)}
+.detail-header .act-btn.primary:hover{box-shadow:0 4px 16px rgba(99,102,241,0.35)}
+
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px}
+.info-box{padding:14px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)}
+.info-box .ib-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;font-weight:600}
+.info-box .ib-value{font-size:13px;font-weight:600;color:var(--text);font-family:var(--mono)}
+.info-box .ib-value.copyable{cursor:pointer;transition:color .15s}
+.info-box .ib-value.copyable:hover{color:var(--blue)}
+
+/* RUBRICS */
+.rubric-list{display:flex;flex-direction:column;gap:8px}
+.rubric-card{padding:14px 16px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);transition:all .15s}
+.rubric-card:hover{border-color:rgba(255,255,255,0.08)}
+.rubric-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.rubric-criterion{flex:1;font-size:13px;color:var(--text);line-height:1.5}
+.rubric-actions{display:flex;gap:4px;flex-shrink:0}
+.rubric-actions button{padding:4px 8px;cursor:pointer;color:var(--text-dim);font-size:11px;border:1px solid transparent;border-radius:4px;background:transparent;font-family:inherit;transition:all .15s}
+.rubric-actions button:hover{color:var(--text-sec);border-color:var(--glass-border);background:rgba(255,255,255,0.02)}
+.rubric-actions .copy-btn:hover{color:var(--blue)}
+.rubric-actions .del-btn:hover{color:var(--red)}
+.rubric-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rubric-tag{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid transparent}
+.tag-must{background:rgba(248,113,113,0.06);color:#f08080;border-color:rgba(248,113,113,0.1)}
+.tag-good{background:rgba(251,191,36,0.05);color:#d4a94a;border-color:rgba(251,191,36,0.08)}
+.tag-universal{background:rgba(148,163,184,0.06);color:#8a9bb0;border-color:rgba(148,163,184,0.1)}
+.tag-positive{background:rgba(74,222,128,0.05);color:#5db87a;border-color:rgba(74,222,128,0.08)}
+.tag-negative{background:rgba(248,113,113,0.05);color:#d08080;border-color:rgba(248,113,113,0.08)}
+.tag-milestone{background:rgba(129,140,248,0.06);color:#9099e0;border-color:rgba(129,140,248,0.12)}
+.tag-type{background:rgba(148,163,184,0.05);color:#8a9bb0;border-color:rgba(148,163,184,0.08)}
+.ms-coverage{margin-bottom:16px;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04)}
+.ms-coverage-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:8px;font-weight:700}
+.ms-coverage-grid{display:flex;gap:6px;flex-wrap:wrap}
+.ms-cov-pill{padding:3px 10px;border-radius:5px;font-size:11px;font-weight:600;border:1px solid}
+.ms-cov-ok{color:var(--green);border-color:rgba(74,222,128,0.2);background:rgba(74,222,128,0.06)}
+.ms-cov-missing{color:var(--red);border-color:rgba(248,113,113,0.2);background:rgba(248,113,113,0.06)}
+.rubric-rationale{font-size:11px;color:var(--text-muted);margin-top:4px;line-height:1.4}
+
+/* Generation loading */
+.gen-loading{padding:40px;text-align:center}
+.gen-loading .spinner{width:28px;height:28px;border-width:3px;margin:0 auto 14px}
+.gen-substep{transition:opacity .2s ease;font-size:12px;color:var(--text-dim);margin-top:6px}
+.gen-step{font-size:12px;color:var(--text-sec);margin-top:8px;font-weight:600}
+.gen-substep{font-size:11px;color:var(--text-muted);margin-top:4px}
+.gen-bar{width:200px;height:4px;background:rgba(255,255,255,0.06);border-radius:4px;margin:12px auto 0;overflow:hidden}
+.gen-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue),#818cf8);border-radius:4px;transition:width .6s ease}
+.gen-usage{margin-top:12px;padding:12px 16px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);font-size:11px;color:var(--text-muted)}
+.gen-usage strong{color:var(--text-sec)}
+.gen-usage-grid{display:flex;gap:16px;margin-top:6px;flex-wrap:wrap}
+.gen-usage-item{display:flex;flex-direction:column;gap:2px}
+.gen-usage-label{font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text-dim)}
+.gen-usage-val{font-size:13px;font-weight:700;font-family:var(--mono);color:var(--text-sec)}
+
+/* RUBRIC FORM */
+.rubric-form{padding:16px;margin-top:12px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06)}
+.rubric-form textarea{width:100%;padding:10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:var(--text);font-size:13px;font-family:inherit;outline:none;resize:vertical;min-height:60px;margin-bottom:8px}
+.rubric-form textarea:focus{border-color:var(--blue)}
+.rubric-form .rf-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.rubric-form select,.rubric-form input[type=text]{padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:var(--text);font-size:12px;font-family:inherit;outline:none}
+.rubric-form select:focus,.rubric-form input[type=text]:focus{border-color:var(--blue)}
+.rubric-form .rf-actions{display:flex;gap:8px;margin-top:8px}
+.rubric-form .rf-btn{padding:6px 16px;cursor:pointer;font-size:12px;font-weight:600;border-radius:6px;border:1px solid var(--glass-border);background:transparent;color:var(--text-sec);font-family:inherit;transition:all .15s}
+.rubric-form .rf-btn:hover{border-color:var(--glass-hover-border);background:rgba(255,255,255,0.03)}
+.rubric-form .rf-btn.save{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border:none}
+
+/* EDIT MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{width:500px;max-width:90vw;max-height:80vh;overflow-y:auto;padding:24px}
+
+/* LOADING */
+.loading{text-align:center;padding:40px;color:var(--text-muted);font-size:12px}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--glass-border);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:8px;background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);color:var(--green);font-size:12px;font-weight:600;z-index:200;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.15)}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+
+<div class="topbar">
+  <h1>Trajectory Viewer Admin</h1>
+  <div class="spacer"></div>
+  <button class="act-btn" onclick="exportCSV()">Export Credentials CSV</button>
+  <button class="act-btn danger" onclick="logout()">Logout</button>
+</div>
+
+<div class="content">
+  <!-- TASK LIST VIEW -->
+  <div id="task-list-view">
+    <div class="upload-zone" id="upload-zone">
+      <div class="uz-icon">&#128193;</div>
+      <h2>Upload a task folder</h2>
+      <p>Drop a folder containing model directories<br>Each should have <b>task.json</b>, <b>trajectories/</b>, and optionally <b>opencode_export.json</b></p>
+    </div>
+    <input type="file" id="fi-folder" webkitdirectory multiple>
+
+    <div class="section-title">Tasks</div>
+    <div class="task-list" id="task-list">
+      <div class="loading">Loading tasks...</div>
+    </div>
+  </div>
+
+  <!-- TASK DETAIL VIEW -->
+  <div id="task-detail">
+    <button class="back-btn" onclick="showList()">&larr; Back to tasks</button>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- EDIT RUBRIC MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal glass" id="edit-modal-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var currentTaskId = null;
+
+// ── Auth check ──
+(async function() {
+  var res = await fetch('/api/auth/me');
+  if (!res.ok) return window.location.href = '/login.html';
+  var data = await res.json();
+  if (!data.isAdmin) return window.location.href = '/viewer.html';
+  loadTasks();
+})();
+
+// ── Toast ──
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 2000);
+}
+
+function esc(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ── Logout ──
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login.html';
+}
+
+// ── Export CSV ──
+function exportCSV() {
+  window.location.href = '/api/admin/credentials/export';
+}
+
+// ═══════════════════════════════════════════════
+// UPLOAD
+// ═══════════════════════════════════════════════
+var uz = document.getElementById('upload-zone');
+var fiFolder = document.getElementById('fi-folder');
+
+uz.addEventListener('click', function() { fiFolder.click(); });
+uz.addEventListener('dragover', function(e) { e.preventDefault(); uz.classList.add('over'); });
+uz.addEventListener('dragleave', function() { uz.classList.remove('over'); });
+uz.addEventListener('drop', function(e) {
+  e.preventDefault(); uz.classList.remove('over');
+  var items = e.dataTransfer.items;
+  if (items && items.length && items[0].webkitGetAsEntry) {
+    var entries = [];
+    for (var i = 0; i < items.length; i++) { var en = items[i].webkitGetAsEntry(); if (en) entries.push(en); }
+    readEntries(entries);
+  } else {
+    handleFileList(e.dataTransfer.files);
+  }
+});
+fiFolder.addEventListener('change', function(e) { handleFileList(e.target.files); });
+
+function readEntries(entries) {
+  var allFiles = [], pending = 0;
+  function checkDone() { if (pending === 0) processUpload(allFiles); }
+  function traverse(entry, path) {
+    pending++;
+    if (entry.isFile) {
+      entry.file(function(f) { f._path = path + f.name; allFiles.push(f); pending--; checkDone(); });
+    } else if (entry.isDirectory) {
+      var reader = entry.createReader();
+      (function readBatch() {
+        reader.readEntries(function(results) {
+          if (!results.length) { pending--; checkDone(); return; }
+          for (var i = 0; i < results.length; i++) traverse(results[i], path + entry.name + '/');
+          readBatch();
+        });
+      })();
+    }
+  }
+  entries.forEach(function(e) { traverse(e, ''); });
+}
+
+function handleFileList(fileList) {
+  var files = Array.from(fileList);
+  files.forEach(function(f) { f._path = f.webkitRelativePath || f.name; });
+  processUpload(files);
+}
+
+function readJSON(file) { return new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { try { res(JSON.parse(e.target.result)); } catch(err) { res(null); } }; r.readAsText(file); }); }
+function readText(file) { return new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.readAsText(file); }); }
+
+async function processUpload(files) {
+  uz.querySelector('h2').textContent = 'Processing...';
+
+  // Group files by model directory (auto-detect: first subdir level that isn't the root)
+  var groups = {}, ungrouped = [], taskJson = null, taskName = '';
+  // Find the common root prefix depth (the dropped folder itself)
+  var rootDepth = Infinity;
+  files.forEach(function(f) {
+    var parts = (f._path || f.name).split('/');
+    if (parts.length > 1 && parts.length - 1 < rootDepth) rootDepth = parts.length - 1;
+  });
+  if (rootDepth === Infinity) rootDepth = 0;
+
+  files.forEach(function(f) {
+    var path = f._path || f.name, parts = path.split('/');
+    // Model dir is one level below the root folder
+    var modelDir = parts.length > rootDepth + 1 ? parts[rootDepth] : null;
+    // Skip the root-level task.json from being grouped — handle it separately
+    var fname = parts[parts.length - 1];
+    if (!modelDir || (parts.length === rootDepth + 2 && fname === 'task.json')) { ungrouped.push(f); return; }
+    if (!groups[modelDir]) groups[modelDir] = [];
+    groups[modelDir].push(f);
+  });
+  if (!Object.keys(groups).length && ungrouped.length) { groups['model_1'] = ungrouped; }
+  var modelKeys = Object.keys(groups);
+  if (!modelKeys.length) { uz.querySelector('h2').textContent = 'No valid files found'; return; }
+
+  // Find task.json from first model or root
+  for (var mk of modelKeys) {
+    for (var f of groups[mk]) {
+      var fname = f.name || (f._path || '').split('/').pop();
+      if (fname === 'task.json' && !taskJson) {
+        taskJson = await readJSON(f);
+        break;
+      }
+    }
+    if (taskJson) break;
+  }
+  // Also check ungrouped
+  if (!taskJson) {
+    for (var uf of ungrouped) {
+      if ((uf.name || '').toLowerCase() === 'task.json') { taskJson = await readJSON(uf); break; }
+    }
+  }
+
+  taskName = (taskJson && (taskJson.task_title || taskJson.name)) || 'Task ' + new Date().toISOString().slice(0,10);
+
+  // Build models array
+  var models = [];
+  for (var key of modelKeys) {
+    var g = groups[key];
+    var model = { name: key, trajectoryJson: null, opencodeJson: null, milestoneProgress: null };
+    for (var file of g) {
+      var fn = file.name || (file._path || '').split('/').pop();
+      var subpath = (file._path || '').toLowerCase();
+      if (fn === 'opencode_export.json') model.opencodeJson = await readJSON(file);
+      else if (subpath.indexOf('trajectory') !== -1 && fn.endsWith('.json')) model.trajectoryJson = await readJSON(file);
+      else if (fn === 'milestone_progress.jsonl') model.milestoneProgress = await readText(file);
+    }
+    models.push(model);
+  }
+
+  uz.querySelector('h2').textContent = 'Uploading to server...';
+
+  try {
+    var res = await fetch('/api/admin/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: taskName, taskJson: taskJson, models: models })
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    toast('Task created! User: ' + data.credentials.username);
+    uz.querySelector('h2').textContent = 'Upload a task folder';
+    loadTasks();
+  } catch(err) {
+    uz.querySelector('h2').textContent = 'Upload failed: ' + err.message;
+  }
+}
+
+// ═══════════════════════════════════════════════
+// TASK LIST
+// ═══════════════════════════════════════════════
+async function loadTasks() {
+  var res = await fetch('/api/admin/tasks');
+  var tasks = await res.json();
+  var el = document.getElementById('task-list');
+
+  if (!tasks.length) {
+    el.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:20px;text-align:center">No tasks yet. Upload a task folder above.</div>';
+    return;
+  }
+
+  var html = '';
+  tasks.forEach(function(t) {
+    html += '<div class="task-card glass" onclick="showTask(\'' + t.id + '\')">';
+    html += '<div class="task-name">' + esc(t.name) + '</div>';
+    html += '<div class="task-meta">';
+    html += '<span class="task-badge">' + (t.models ? t.models.length : 0) + ' models</span>';
+    if (t.rubricCount) html += '<span class="task-badge has-rubrics">' + t.rubricCount + ' rubrics</span>';
+    else html += '<span class="task-badge">No rubrics</span>';
+    if (t.user) html += '<span class="task-creds">' + esc(t.user.username) + ' / ' + esc(t.user.password) + '</span>';
+    html += '</div>';
+    html += '<button class="task-delete" onclick="event.stopPropagation();deleteTask(\'' + t.id + '\',\'' + esc(t.name) + '\')">Delete</button>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+async function deleteTask(id, name) {
+  if (!confirm('Delete task "' + name + '"? This cannot be undone.')) return;
+  await fetch('/api/admin/tasks/' + id, { method: 'DELETE' });
+  toast('Task deleted');
+  loadTasks();
+}
+
+// ═══════════════════════════════════════════════
+// TASK DETAIL
+// ═══════════════════════════════════════════════
+async function showTask(id) {
+  currentTaskId = id;
+  document.getElementById('task-list-view').style.display = 'none';
+  document.getElementById('task-detail').style.display = 'block';
+  document.getElementById('detail-content').innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
+
+  var res = await fetch('/api/admin/tasks/' + id);
+  var data = await res.json();
+  renderDetail(data);
+}
+
+function showList() {
+  currentTaskId = null;
+  document.getElementById('task-list-view').style.display = 'block';
+  document.getElementById('task-detail').style.display = 'none';
+  loadTasks();
+}
+
+function renderDetail(data) {
+  var t = data.task, rubrics = data.rubrics || [], trajs = data.trajectories || [], user = data.user;
+  var html = '';
+
+  html += '<div class="detail-header">';
+  html += '<h2>' + esc(t.name) + '</h2>';
+  html += '<button class="act-btn" onclick="window.open(\'/viewer.html?task=' + t.id + '\',\'_blank\')">View Trajectories</button>';
+  html += '<button class="act-btn primary" onclick="generateRubrics()">Generate Rubrics</button>';
+  html += '<button class="act-btn" onclick="addRubricForm()">+ Add Rubric</button>';
+  html += '</div>';
+
+  // Info grid
+  html += '<div class="info-grid">';
+  html += '<div class="info-box"><div class="ib-label">Models</div><div class="ib-value">' + trajs.map(function(t) { return esc(t.model_name); }).join(', ') + '</div></div>';
+  if (user) {
+    html += '<div class="info-box"><div class="ib-label">Username</div><div class="ib-value copyable" onclick="copyText(\'' + esc(user.username) + '\')">' + esc(user.username) + ' <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;opacity:0.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div></div>';
+    html += '<div class="info-box"><div class="ib-label">Password</div><div class="ib-value copyable" onclick="copyText(\'' + esc(user.password) + '\')">' + esc(user.password) + ' <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;opacity:0.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></div></div>';
+  }
+  html += '<div class="info-box"><div class="ib-label">Rubrics</div><div class="ib-value">' + rubrics.length + '</div></div>';
+  html += '</div>';
+
+  // Milestone coverage check
+  var taskData = null;
+  try { taskData = JSON.parse(t.task_json); } catch(e) {}
+  var msIds = [];
+  if (taskData) {
+    var msList = (taskData.milestones || (taskData.user_intent && taskData.user_intent.milestones) || []);
+    msList.forEach(function(ms) { var id = ms.milestone_id || ms.id || ms.name; if (id) msIds.push(id); });
+  }
+  if (msIds.length && rubrics.length) {
+    var coveredMs = {};
+    rubrics.forEach(function(r) { if (r.milestone_id) coveredMs[r.milestone_id] = true; });
+    html += '<div class="ms-coverage">';
+    html += '<div class="ms-coverage-title">Milestone Coverage</div>';
+    html += '<div class="ms-coverage-grid">';
+    msIds.forEach(function(id) {
+      var ok = coveredMs[id];
+      html += '<span class="ms-cov-pill ' + (ok ? 'ms-cov-ok' : 'ms-cov-missing') + '">' + esc(id) + (ok ? '' : ' (missing)') + '</span>';
+    });
+    html += '</div></div>';
+  }
+
+  // Rubrics
+  html += '<div class="section-title">Rubrics (' + rubrics.length + ')</div>';
+  html += '<div id="rubric-add-area"></div>';
+  html += '<div class="rubric-list" id="rubric-list">';
+  if (!rubrics.length) {
+    html += '<div style="color:var(--text-dim);font-size:12px;padding:16px;text-align:center">No rubrics yet. Click "Generate Rubrics" or add manually.</div>';
+  } else {
+    rubrics.forEach(function(r) { html += renderRubricCard(r); });
+  }
+  html += '</div>';
+
+  document.getElementById('detail-content').innerHTML = html;
+}
+
+function renderRubricCard(r) {
+  var importClass = r.importance === 'MUST_FOLLOW' ? 'tag-must' : r.importance === 'GOOD_TO_HAVE' ? 'tag-good' : 'tag-universal';
+  var html = '<div class="rubric-card" id="rubric-' + r.id + '">';
+  html += '<div class="rubric-top">';
+  html += '<div class="rubric-criterion">' + esc(r.criterion) + '</div>';
+  html += '<div class="rubric-actions">';
+  html += '<button class="copy-btn" title="Copy" onclick="copyText(\'' + esc(r.criterion).replace(/'/g, "\\'") + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>';
+  html += '<button onclick="editRubric(\'' + r.id + '\')">Edit</button>';
+  html += '<button class="del-btn" onclick="deleteRubric(\'' + r.id + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>';
+  html += '</div></div>';
+  html += '<div class="rubric-meta">';
+  if (r.milestone_id) html += '<span class="rubric-tag tag-milestone">' + esc(r.milestone_id) + '</span>';
+  html += '<span class="rubric-tag tag-type">' + (r.type || 'correctness') + '</span>';
+  html += '<span class="rubric-tag ' + importClass + '">' + r.importance + '</span>';
+  html += '<span class="rubric-tag ' + (r.is_positive ? 'tag-positive' : 'tag-negative') + '">' + (r.is_positive ? 'POSITIVE' : 'NEGATIVE') + '</span>';
+  html += '</div>';
+  if (r.rationale) html += '<div class="rubric-rationale">' + esc(r.rationale) + '</div>';
+  html += '</div>';
+  return html;
+}
+
+// ═══════════════════════════════════════════════
+// RUBRIC ACTIONS
+// ═══════════════════════════════════════════════
+var _genPollTimer = null;
+var _genFlavorTimer = null;
+var _genCurrentStep = 1;
+var _genLastFlavor = '';
+
+var GEN_FLAVORS = {
+  1: [
+    'Analyzing trajectories...', 'Studying agent behavior...', 'Examining milestones...',
+    'Crafting evaluation criteria...', 'Inspecting code changes...', 'Mapping success patterns...',
+    'Identifying key signals...', 'Distilling requirements...', 'Pondering what matters...',
+    'Reading between the lines...', 'Connecting the dots...', 'Weighing trade-offs...'
+  ],
+  2: [
+    'Getting a second opinion...', 'Cross-examining criteria...', 'Stress-testing rubrics...',
+    'Playing devil\'s advocate...', 'Checking for blind spots...', 'Hunting for redundancies...',
+    'Probing for vagueness...', 'Challenging assumptions...', 'Scrutinizing coverage...',
+    'Poking holes in the logic...', 'Seeking fresh perspectives...', 'Sharpening the edges...'
+  ],
+  3: [
+    'Deliberating on feedback...', 'Synthesizing insights...', 'Polishing final criteria...',
+    'Making the tough calls...', 'Balancing the rubric mix...', 'Fine-tuning wording...',
+    'Almost there...', 'Putting finishing touches...', 'Wrapping things up...',
+    'Locking in the final set...', 'One last look...', 'Dotting the i\'s...'
+  ]
+};
+
+function pickFlavor(step) {
+  var pool = GEN_FLAVORS[step] || GEN_FLAVORS[1];
+  var pick;
+  do { pick = pool[Math.floor(Math.random() * pool.length)]; } while (pick === _genLastFlavor && pool.length > 1);
+  _genLastFlavor = pick;
+  return pick;
+}
+
+function updateGenProgress(p) {
+  var stepEl = document.querySelector('.gen-step');
+  var barEl = document.querySelector('.gen-bar-fill');
+  if (stepEl) stepEl.textContent = 'Step ' + p.step + ' of 3';
+  if (barEl) barEl.style.width = Math.round((p.step / 3) * 100) + '%';
+  if (p.step !== _genCurrentStep) {
+    _genCurrentStep = p.step;
+    rotateFlavor();
+  }
+}
+
+function rotateFlavor() {
+  var subEl = document.querySelector('.gen-substep');
+  if (subEl) {
+    subEl.style.opacity = '0';
+    setTimeout(function() {
+      subEl.textContent = pickFlavor(_genCurrentStep);
+      subEl.style.opacity = '1';
+    }, 200);
+  }
+}
+
+function startProgressPoll() {
+  _genCurrentStep = 1;
+  _genPollTimer = setInterval(async function() {
+    try {
+      var res = await fetch('/api/admin/tasks/' + currentTaskId + '/generate-rubrics/progress');
+      var p = await res.json();
+      if (p.active) updateGenProgress(p);
+    } catch(e) {}
+  }, 2000);
+  _genFlavorTimer = setInterval(rotateFlavor, 7500);
+}
+
+function stopProgressPoll() {
+  if (_genPollTimer) { clearInterval(_genPollTimer); _genPollTimer = null; }
+  if (_genFlavorTimer) { clearInterval(_genFlavorTimer); _genFlavorTimer = null; }
+}
+
+async function generateRubrics() {
+  if (!confirm('This will replace all existing rubrics with a freshly generated set. Continue?')) return;
+
+  var listEl = document.getElementById('rubric-list');
+  if (listEl) {
+    listEl.innerHTML = '<div class="gen-loading">' +
+      '<div class="spinner" style="display:inline-block"></div>' +
+      '<div class="gen-step">Step 1 of 3</div>' +
+      '<div class="gen-substep">' + pickFlavor(1) + '</div>' +
+      '<div class="gen-bar"><div class="gen-bar-fill" style="width:10%"></div></div>' +
+      '<div style="margin-top:6px;font-size:10px;color:var(--text-dim)">This usually takes 30-60 seconds</div>' +
+      '</div>';
+  }
+
+  var btn = document.querySelector('.detail-header .act-btn.primary');
+  btn.textContent = 'Generating...';
+  btn.disabled = true;
+
+  startProgressPoll();
+
+  try {
+    var res = await fetch('/api/admin/tasks/' + currentTaskId + '/generate-rubrics', { method: 'POST' });
+    stopProgressPoll();
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    toast('Generated ' + data.rubrics.length + ' rubrics');
+    showTask(currentTaskId);
+
+    if (data.usage) {
+      setTimeout(function() {
+        var list = document.getElementById('rubric-list');
+        if (!list) return;
+        var u = data.usage;
+        var usageHtml = '<div class="gen-usage">';
+        usageHtml += '<strong>Last generation usage</strong>';
+        usageHtml += '<div class="gen-usage-grid">';
+        usageHtml += '<div class="gen-usage-item"><span class="gen-usage-label">Input tokens</span><span class="gen-usage-val">' + u.total_input.toLocaleString() + '</span></div>';
+        usageHtml += '<div class="gen-usage-item"><span class="gen-usage-label">Output tokens</span><span class="gen-usage-val">' + u.total_output.toLocaleString() + '</span></div>';
+        usageHtml += '<div class="gen-usage-item"><span class="gen-usage-label">Total tokens</span><span class="gen-usage-val">' + u.total_tokens.toLocaleString() + '</span></div>';
+        usageHtml += '<div class="gen-usage-item"><span class="gen-usage-label">Est. cost</span><span class="gen-usage-val">$' + u.estimated_cost.toFixed(3) + '</span></div>';
+        usageHtml += '</div>';
+        usageHtml += '<div style="margin-top:8px;font-size:10px;color:var(--text-dim)">';
+        var stepLabels = { generate: 'Generate', critique: 'Critique', finalize: 'Finalize' };
+        u.steps.forEach(function(s) {
+          usageHtml += (stepLabels[s.step] || s.step) + ': ' + s.prompt_tokens.toLocaleString() + ' in / ' + s.completion_tokens.toLocaleString() + ' out<br>';
+        });
+        usageHtml += '</div></div>';
+        list.insertAdjacentHTML('beforebegin', usageHtml);
+      }, 100);
+    }
+  } catch(err) {
+    stopProgressPoll();
+    alert('Generation failed: ' + err.message);
+    showTask(currentTaskId);
+  }
+}
+
+function addRubricForm() {
+  var area = document.getElementById('rubric-add-area');
+  if (area.querySelector('.rubric-form')) return;
+  area.innerHTML = renderRubricFormHTML('', 'correctness', 'MUST_FOLLOW', true, '', '', 'saveNewRubric()', 'cancelAdd()');
+}
+
+function cancelAdd() {
+  document.getElementById('rubric-add-area').innerHTML = '';
+}
+
+async function saveNewRubric() {
+  var form = document.getElementById('rubric-add-area').querySelector('.rubric-form');
+  var criterion = form.querySelector('textarea').value.trim();
+  if (!criterion) return;
+  var type = form.querySelector('[name=type]').value;
+  var importance = form.querySelector('[name=importance]').value;
+  var isPositive = form.querySelector('[name=is_positive]').value === 'true';
+  var milestoneId = form.querySelector('[name=milestone_id]').value.trim();
+  var rationale = form.querySelector('[name=rationale]').value.trim();
+
+  await fetch('/api/admin/tasks/' + currentTaskId + '/rubrics', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ criterion, type, importance, is_positive: isPositive, milestone_id: milestoneId || null, rationale })
+  });
+  toast('Rubric added');
+  showTask(currentTaskId);
+}
+
+async function deleteRubric(id) {
+  if (!confirm('Delete this rubric?')) return;
+  await fetch('/api/admin/rubrics/' + id, { method: 'DELETE' });
+  var el = document.getElementById('rubric-' + id);
+  if (el) el.remove();
+  toast('Rubric deleted');
+}
+
+function editRubric(id) {
+  // Fetch current rubric data from DOM and show modal
+  var card = document.getElementById('rubric-' + id);
+  if (!card) return;
+  var criterion = card.querySelector('.rubric-criterion').textContent;
+  var tags = card.querySelectorAll('.rubric-tag');
+  var importance = 'MUST_FOLLOW', isPositive = true, milestoneId = '', type = 'correctness';
+  tags.forEach(function(tag) {
+    var text = tag.textContent;
+    if (['MUST_FOLLOW','GOOD_TO_HAVE','UNIVERSAL'].includes(text)) importance = text;
+    if (text === 'POSITIVE') isPositive = true;
+    if (text === 'NEGATIVE') isPositive = false;
+    if (tag.classList.contains('tag-milestone')) milestoneId = text;
+    if (tag.classList.contains('tag-type')) type = text;
+  });
+  var rationale = '';
+  var ratEl = card.querySelector('.rubric-rationale');
+  if (ratEl) rationale = ratEl.textContent;
+
+  var modal = document.getElementById('edit-modal');
+  var content = document.getElementById('edit-modal-content');
+  content.innerHTML = '<h3 style="margin-bottom:16px;font-size:15px">Edit Rubric</h3>' +
+    renderRubricFormHTML(criterion, type, importance, isPositive, milestoneId, rationale, 'saveEditRubric(\'' + id + '\')', 'closeModal()');
+  modal.classList.add('active');
+}
+
+async function saveEditRubric(id) {
+  var form = document.querySelector('#edit-modal-content .rubric-form');
+  var criterion = form.querySelector('textarea').value.trim();
+  if (!criterion) return;
+  var type = form.querySelector('[name=type]').value;
+  var importance = form.querySelector('[name=importance]').value;
+  var isPositive = form.querySelector('[name=is_positive]').value === 'true';
+  var milestoneId = form.querySelector('[name=milestone_id]').value.trim();
+  var rationale = form.querySelector('[name=rationale]').value.trim();
+
+  await fetch('/api/admin/rubrics/' + id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ criterion, type, importance, is_positive: isPositive, milestone_id: milestoneId || null, rationale })
+  });
+  toast('Rubric updated');
+  closeModal();
+  showTask(currentTaskId);
+}
+
+function closeModal() {
+  document.getElementById('edit-modal').classList.remove('active');
+}
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+function renderRubricFormHTML(criterion, type, importance, isPositive, milestoneId, rationale, saveAction, cancelAction) {
+  return '<div class="rubric-form">' +
+    '<textarea placeholder="Rubric criterion (e.g. Agent creates the migration file)">' + esc(criterion) + '</textarea>' +
+    '<div class="rf-row">' +
+    '<select name="type"><option value="correctness"' + (type === 'correctness' ? ' selected' : '') + '>correctness</option><option value="communication"' + (type === 'communication' ? ' selected' : '') + '>communication</option><option value="agent_behavior"' + (type === 'agent_behavior' ? ' selected' : '') + '>agent_behavior</option><option value="code_style"' + (type === 'code_style' ? ' selected' : '') + '>code_style</option></select>' +
+    '<select name="importance"><option value="MUST_FOLLOW"' + (importance === 'MUST_FOLLOW' ? ' selected' : '') + '>MUST_FOLLOW</option><option value="GOOD_TO_HAVE"' + (importance === 'GOOD_TO_HAVE' ? ' selected' : '') + '>GOOD_TO_HAVE</option><option value="UNIVERSAL"' + (importance === 'UNIVERSAL' ? ' selected' : '') + '>UNIVERSAL</option></select>' +
+    '<select name="is_positive"><option value="true"' + (isPositive ? ' selected' : '') + '>Positive (PASS = met)</option><option value="false"' + (!isPositive ? ' selected' : '') + '>Negative (PASS = not met)</option></select>' +
+    '<input type="text" name="milestone_id" placeholder="Milestone ID" value="' + esc(milestoneId) + '" style="width:120px">' +
+    '</div>' +
+    '<input type="text" name="rationale" placeholder="Rationale (optional)" value="' + esc(rationale) + '" style="width:100%;padding:8px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:var(--text);font-size:12px;font-family:inherit;outline:none">' +
+    '<div class="rf-actions">' +
+    '<button class="rf-btn save" onclick="' + saveAction + '">Save</button>' +
+    '<button class="rf-btn" onclick="' + cancelAction + '">Cancel</button>' +
+    '</div></div>';
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(function() { toast('Copied!'); });
+}
+</script>
+</body>
+</html>

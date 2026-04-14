@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trajectory Viewer - Login</title>
+<style>
+:root {
+  --bg: #06060e;
+  --glass: rgba(255,255,255,0.035);
+  --glass-border: rgba(255,255,255,0.07);
+  --text: #e2e8f0;
+  --text-sec: #94a3b8;
+  --text-muted: #64748b;
+  --blue: #60a5fa;
+  --green: #4ade80;
+  --red: #f87171;
+  --radius: 14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+
+.bg-orbs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.orb{position:absolute;border-radius:50%;filter:blur(100px)}
+.orb-1{width:700px;height:700px;background:rgba(99,102,241,0.07);top:-15%;left:5%;animation:f1 25s ease-in-out infinite}
+.orb-2{width:500px;height:500px;background:rgba(139,92,246,0.05);bottom:0;right:5%;animation:f2 30s ease-in-out infinite}
+.orb-3{width:400px;height:400px;background:rgba(14,165,233,0.04);top:40%;left:45%;animation:f3 20s ease-in-out infinite}
+@keyframes f1{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,40px)}}
+@keyframes f2{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,-50px)}}
+@keyframes f3{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-30px)}}
+
+.login-card{position:relative;z-index:1;width:380px;padding:40px;background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid var(--glass-border);border-radius:var(--radius);box-shadow:0 8px 32px rgba(0,0,0,0.25),inset 0 1px 0 rgba(255,255,255,0.03)}
+.login-card h1{font-size:22px;font-weight:700;margin-bottom:4px;background:linear-gradient(135deg,#e2e8f0,#94a3b8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.login-card .subtitle{color:var(--text-muted);font-size:12px;margin-bottom:28px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:11px;font-weight:600;color:var(--text-sec);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+.form-group input{width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.form-group input:focus{border-color:var(--blue)}
+.login-btn{width:100%;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s;margin-top:8px;box-shadow:0 4px 20px rgba(99,102,241,0.3)}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(99,102,241,0.4)}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.error-msg{color:var(--red);font-size:12px;margin-top:12px;min-height:18px;text-align:center}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+
+<div class="login-card">
+  <h1>Trajectory Viewer</h1>
+  <div class="subtitle">Sign in to continue</div>
+  <form id="login-form">
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="username" autocomplete="username" required autofocus>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+    </div>
+    <button type="submit" class="login-btn" id="login-btn">Sign In</button>
+    <div class="error-msg" id="error"></div>
+  </form>
+</div>
+
+<script>
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('login-btn');
+  var errEl = document.getElementById('error');
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+
+  try {
+    var res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('username').value.trim(),
+        password: document.getElementById('password').value
+      })
+    });
+    var data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Login failed'; return; }
+    window.location.href = data.isAdmin ? '/admin.html' : '/viewer.html';
+  } catch(err) {
+    errEl.textContent = 'Connection error';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+});
+</script>
+</body>
+</html>
