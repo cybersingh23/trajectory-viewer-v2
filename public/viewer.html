@@ -101,6 +101,9 @@ body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-se
 .pf-green{background:linear-gradient(90deg,#22c55e,#4ade80)}
 .pf-blue{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
 .pf-red{background:linear-gradient(90deg,#dc2626,#f87171)}
+.pf-amber{background:linear-gradient(90deg,#d97706,#fbbf24)}
+.mc-tools{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px}
+.mc-tool-tag{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)}
 
 .cv-table-wrap{padding:20px}
 .cv-table-wrap h3{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:12px;font-weight:700}
@@ -153,6 +156,28 @@ body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-se
 .diff{background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.04);border-radius:6px;padding:10px 12px;overflow-x:auto;font-size:11px;font-family:var(--mono);line-height:1.6;margin:4px 0;max-height:400px;overflow-y:auto}
 .diff .del{background:rgba(239,68,68,0.08);color:var(--red);display:block}.diff .add{background:rgba(74,222,128,0.08);color:var(--green);display:block}
 .empty-resp{padding:8px 12px;color:var(--text-dim);font-size:12px;font-style:italic;margin:4px 0}
+
+/* ═══ ASK & TODO RENDERERS ═══ */
+.ask-block{margin:4px 0}
+.ask-q{margin-bottom:8px}
+.ask-label{font-size:9px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px}
+.ask-text{font-size:12px;color:var(--text);line-height:1.6;padding:6px 10px;border-left:2px solid rgba(240,171,252,0.25);background:rgba(240,171,252,0.02);border-radius:0 4px 4px 0}
+.ask-opts{margin-top:6px;padding-left:14px}
+.ask-opt{font-size:11px;color:var(--text-sec);line-height:1.7}
+.ask-opt::before{content:'\2192';color:var(--purple);margin-right:6px;font-size:10px}
+.ask-opt-desc{color:var(--text-muted);font-size:10px;margin-left:2px}
+.todo-list{margin:4px 0;display:flex;flex-direction:column;gap:3px}
+.todo-item{display:flex;align-items:flex-start;gap:8px;padding:5px 10px;border-radius:5px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.015);font-size:11px;line-height:1.4}
+.todo-check{flex-shrink:0;width:14px;height:14px;border-radius:3px;border:1.5px solid var(--text-dim);margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:9px}
+.todo-item.td-completed .todo-check{border-color:var(--green);color:var(--green)}
+.todo-item.td-in_progress .todo-check{border-color:var(--amber);color:var(--amber)}
+.todo-item.td-pending .todo-check{border-color:var(--text-dim)}
+.todo-content{flex:1;color:var(--text-sec)}
+.todo-item.td-completed .todo-content{text-decoration:line-through;color:var(--text-muted)}
+.todo-priority{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:1px 5px;border-radius:3px;flex-shrink:0}
+.todo-priority.tp-high{color:var(--red);background:rgba(248,113,113,0.08)}
+.todo-priority.tp-medium{color:var(--amber);background:rgba(251,191,36,0.08)}
+.todo-priority.tp-low{color:var(--text-muted);background:rgba(255,255,255,0.04)}
 
 /* ═══ RIGHT SIDEBAR ═══ */
 .sidebar{width:300px;min-width:280px;border-left:1px solid var(--glass-border);overflow-y:auto;flex-shrink:0;background:rgba(255,255,255,0.01)}
@@ -486,7 +511,21 @@ function computeMetrics(model) {
     });
   });
 
-  return { totalTurns: totalTurns, userTurns: userTurns, asstTurns: asstTurns, maxTurns: maxTurns, exceedsMax: maxTurns && totalTurns > maxTurns, msTotal: msTotal, msCompleted: msCompleted, msDetails: msDetails, intTotal: intTotal, intMatched: intMatched, intDetails: intDetails };
+  // Tool call counts (from opencode data)
+  var totalTools = 0, toolCounts = {};
+  if (model.opencode && model.opencode.messages) {
+    model.opencode.messages.forEach(function(msg) {
+      (msg.parts || []).forEach(function(p) {
+        if (p.type === 'tool') {
+          totalTools++;
+          var tn = p.tool || 'other';
+          toolCounts[tn] = (toolCounts[tn] || 0) + 1;
+        }
+      });
+    });
+  }
+
+  return { totalTurns: totalTurns, userTurns: userTurns, asstTurns: asstTurns, maxTurns: maxTurns, exceedsMax: maxTurns && totalTurns > maxTurns, msTotal: msTotal, msCompleted: msCompleted, msDetails: msDetails, intTotal: intTotal, intMatched: intMatched, intDetails: intDetails, totalTools: totalTools, toolCounts: toolCounts };
 }
 
 function matchInteraction(intr, userTexts, allTexts) {
@@ -707,6 +746,16 @@ function renderMetricCard(mk) {
   }
   html += '<div class="mc-row"><span class="mc-label">Turns</span><span class="mc-value' + (m.exceedsMax ? '" style="color:var(--red)' : '') + '">' + m.totalTurns + (m.maxTurns ? ' / ' + m.maxTurns : '') + '</span></div>';
   if (m.maxTurns) html += '<div class="progress-track"><div class="progress-fill ' + (m.exceedsMax ? 'pf-red' : 'pf-blue') + '" style="width:' + turnPct + '%"></div></div>';
+  if (m.totalTools) {
+    html += '<div class="mc-row"><span class="mc-label">Tool calls</span><span class="mc-value">' + m.totalTools + '</span></div>';
+    var topTools = Object.entries(m.toolCounts).sort(function(a,b) { return b[1] - a[1]; }).slice(0, 4);
+    html += '<div class="mc-tools">' + topTools.map(function(t) { return '<span class="mc-tool-tag tb-' + t[0] + '">' + (LABELS[t[0]] || t[0]) + ' ' + t[1] + '</span>'; }).join('') + '</div>';
+  }
+  if (m.intTotal) {
+    var intPct = Math.round(m.intMatched / m.intTotal * 100);
+    html += '<div class="mc-row"><span class="mc-label">Planned Interactions</span><span class="mc-value" style="color:' + (intPct >= 75 ? 'var(--green)' : intPct >= 50 ? 'var(--amber)' : 'var(--red)') + '">' + m.intMatched + ' / ' + m.intTotal + '</span></div>';
+    html += '<div class="progress-track"><div class="progress-fill ' + (intPct >= 75 ? 'pf-green' : intPct >= 50 ? 'pf-amber' : 'pf-red') + '" style="width:' + intPct + '%"></div></div>';
+  }
   html += '</div>';
   return html;
 }
@@ -843,6 +892,38 @@ function renderToolBlock(p) {
   } else if (tn === 'grep') {
     html += '<div style="color:var(--text-muted);font-size:11px;margin-bottom:4px">pattern: <b style="color:var(--purple)">' + esc(inp.pattern || '') + '</b></div>';
     if (out) html += '<div class="codeblock">' + esc(trunc(out, 2000)) + '</div>';
+  } else if (tn === 'question') {
+    html += '<div class="ask-block">';
+    (inp.questions || []).forEach(function(q) {
+      html += '<div class="ask-q">';
+      if (q.header) html += '<div class="ask-label">' + esc(q.header) + '</div>';
+      html += '<div class="ask-text">' + esc(q.question || '') + '</div>';
+      if (q.options && q.options.length) {
+        html += '<div class="ask-opts">';
+        q.options.forEach(function(o) {
+          html += '<div class="ask-opt">' + esc(o.label || '');
+          if (o.description) html += ' <span class="ask-opt-desc">&mdash; ' + esc(o.description) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  } else if (tn === 'todowrite') {
+    var todos = inp.todos || [];
+    if (!todos.length && out) { try { todos = JSON.parse(out); } catch(e) {} }
+    html += '<div class="todo-list">';
+    todos.forEach(function(t) {
+      var s = (t.status || 'pending').replace(/\s+/g, '_');
+      var icon = s === 'completed' ? '&#10003;' : s === 'in_progress' ? '&#9679;' : '';
+      html += '<div class="todo-item td-' + s + '">';
+      html += '<div class="todo-check">' + icon + '</div>';
+      html += '<div class="todo-content">' + esc(t.content || '') + '</div>';
+      if (t.priority) html += '<span class="todo-priority tp-' + (t.priority || 'medium') + '">' + esc(t.priority) + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
   } else {
     var is = JSON.stringify(inp, null, 2);
     if (is && is !== '{}') html += '<div class="codeblock">' + esc(is) + '</div>';
@@ -1135,6 +1216,8 @@ function toolLabel(tn, inp) {
   if (tn === 'write') return (inp.filePath || inp.file_path || inp.path || '').split('/').pop() || 'write';
   if (tn === 'grep') return 'grep: ' + (inp.pattern || '').slice(0, 40);
   if (tn === 'glob') return 'glob: ' + (inp.pattern || inp.glob_pattern || '').slice(0, 40);
+  if (tn === 'question') { var qs = inp.questions || []; return qs.length ? (qs[0].header || qs[0].question || '').slice(0, 60) : 'question'; }
+  if (tn === 'todowrite') { var td = inp.todos || []; return td.length + ' item' + (td.length !== 1 ? 's' : ''); }
   return tn;
 }
 
