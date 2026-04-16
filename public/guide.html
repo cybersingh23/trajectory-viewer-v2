@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ACC Data Annotation - Trajectory Viewer Guide</title>
+<style>
+@page { margin: 0.75in; size: letter; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; line-height: 1.6; max-width: 7.5in; margin: 0 auto; padding: 40px 20px; }
+
+/* Header */
+.doc-header { text-align: center; padding-bottom: 24px; border-bottom: 2px solid #1e293b; margin-bottom: 32px; }
+.doc-header img { height: 32px; margin-bottom: 12px; }
+.doc-header h1 { font-size: 26px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+.doc-header .subtitle { font-size: 13px; color: #64748b; font-style: italic; }
+.doc-header .version { font-size: 11px; color: #94a3b8; margin-top: 8px; }
+
+/* Important callout */
+.callout { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 14px 18px; border-radius: 0 6px 6px 0; margin: 24px 0; font-size: 13px; }
+.callout strong { color: #92400e; }
+.callout.blue { background: #eff6ff; border-left-color: #3b82f6; }
+.callout.blue strong { color: #1e40af; }
+
+/* Sections */
+h2 { font-size: 18px; font-weight: 700; color: #0f172a; margin: 32px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; }
+h3 { font-size: 14px; font-weight: 700; color: #334155; margin: 20px 0 8px; }
+p { font-size: 13px; margin-bottom: 10px; color: #334155; }
+ul, ol { font-size: 13px; margin: 8px 0 16px 24px; color: #334155; }
+li { margin-bottom: 6px; }
+li strong { color: #0f172a; }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 12px; }
+th { background: #1e293b; color: #fff; padding: 8px 12px; text-align: left; font-weight: 600; }
+td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; }
+tr:nth-child(even) td { background: #f8fafc; }
+
+/* Screenshots placeholder */
+.screenshot-note { background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 6px; padding: 16px; text-align: center; color: #64748b; font-size: 12px; font-style: italic; margin: 12px 0; }
+
+/* Step boxes */
+.step-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 18px; margin: 10px 0; }
+.step-box .step-num { font-size: 11px; font-weight: 700; color: #3b82f6; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.step-box p { margin-bottom: 4px; }
+
+/* Code/field names */
+code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; color: #7c3aed; }
+
+/* Checklist */
+.checklist { list-style: none; margin-left: 0; }
+.checklist li { position: relative; padding-left: 24px; margin-bottom: 6px; }
+.checklist li::before { content: '\2610'; position: absolute; left: 0; font-size: 14px; }
+
+/* Footer */
+.doc-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+
+/* Page breaks */
+.page-break { page-break-before: always; }
+
+@media print {
+  body { padding: 0; max-width: none; }
+  .callout { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <img src="/scale-logo.png" alt="Scale AI">
+  <h1>ACC Data Annotation</h1>
+  <div class="subtitle">Trajectory Viewer Platform Guide &mdash; Rubric Review & Creation</div>
+  <div class="version">Version 1.0 &middot; April 2026</div>
+</div>
+
+<div class="callout">
+  <strong>Important:</strong> The Trajectory Viewer is a <strong>review and preparation tool</strong>. It helps you study trajectories, understand rubrics, and prepare your evaluations. <strong>All actual tasking, grading, and submission must be done on the Outlier platform.</strong> The Trajectory Viewer does not replace Outlier &mdash; it supplements it.
+</div>
+
+<h2>1. What is the Trajectory Viewer?</h2>
+<p>The Trajectory Viewer is an internal tool built for ACC Data Annotation that lets you:</p>
+<ul>
+  <li><strong>Compare AI agent trajectories</strong> side-by-side across multiple models for the same task</li>
+  <li><strong>Review auto-generated rubrics</strong> that were created using a multi-model evaluation pipeline</li>
+  <li><strong>Understand task structure</strong> &mdash; milestones, planned interactions, guardrails, and problem statements</li>
+  <li><strong>Bookmark and annotate</strong> specific turns for deeper review</li>
+</ul>
+<p>Think of it as your workspace for studying the task before you grade on Outlier.</p>
+
+<h2>2. Getting Started</h2>
+
+<div class="step-box">
+  <div class="step-num">Step 1 &mdash; Log In</div>
+  <p>Navigate to the platform URL and log in with the credentials provided by your admin. Each annotator gets a unique username and password tied to a specific task.</p>
+</div>
+
+<div class="step-box">
+  <div class="step-num">Step 2 &mdash; Overview Tab</div>
+  <p>You'll land on the <strong>Overview</strong> tab. This shows the task name, problem statement, and a card for each model with key stats: milestone completion, turn count, tool call breakdown, and planned interactions matched.</p>
+</div>
+
+<div class="step-box">
+  <div class="step-num">Step 3 &mdash; Read the Task First</div>
+  <p>Before looking at any trajectories, read the <strong>problem statement</strong> and expand the <strong>milestone table</strong> to understand what the agents were asked to do. This context is critical for evaluating rubrics later.</p>
+</div>
+
+<div class="step-box">
+  <div class="step-num">Step 4 &mdash; Review Trajectories</div>
+  <p>Click a model tab or model card to view the full conversation. Each prompt/response pair is collapsible. Tool calls (Bash, Read, Edit, etc.) are color-coded by type. Use the <strong>star icon</strong> to bookmark turns you want to revisit, and add notes to saved turns.</p>
+</div>
+
+<div class="step-box">
+  <div class="step-num">Step 5 &mdash; Study the Rubrics</div>
+  <p>Scroll to <strong>Evaluation Rubrics</strong> on the Overview tab. Use the dropdown filters to focus on a specific type or milestone. Each rubric shows its criterion, type, importance, milestone, and rationale.</p>
+</div>
+
+<div class="step-box">
+  <div class="step-num">Step 6 &mdash; Go to Outlier</div>
+  <p>Once you've studied the task, trajectories, and rubrics in the Trajectory Viewer, <strong>switch to Outlier</strong> to complete your actual grading and submission.</p>
+</div>
+
+<div class="callout blue">
+  <strong>First-time users:</strong> The platform has a built-in guided tour. Click the <strong>Guide</strong> button in the top-right corner at any time to walk through each part of the interface step by step.
+</div>
+
+<h2 class="page-break">3. Understanding the Interface</h2>
+
+<h3>Overview Tab</h3>
+<table>
+  <tr><th>Element</th><th>What It Shows</th></tr>
+  <tr><td><strong>Model Cards</strong></td><td>Milestones completed, turn count vs. limit, tool call breakdown (top 4 tools), planned interactions matched</td></tr>
+  <tr><td><strong>Milestone Table</strong></td><td>Side-by-side comparison of milestone status across all models (completed / in progress / not started)</td></tr>
+  <tr><td><strong>Evaluation Rubrics</strong></td><td>All rubrics for this task, filterable by type and milestone. Each rubric can be copied for reference.</td></tr>
+</table>
+
+<h3>Model Tabs</h3>
+<table>
+  <tr><th>Element</th><th>What It Shows</th></tr>
+  <tr><td><strong>Turn Groups</strong></td><td>Each user prompt + agent response pair, collapsible. Milestone badges show which milestone a turn belongs to.</td></tr>
+  <tr><td><strong>Tool Blocks</strong></td><td>Color-coded by type: blue (Bash), green (Read), amber (Edit), purple (Grep/Glob), cyan (Write). Click to expand.</td></tr>
+  <tr><td><strong>Star Bookmark</strong></td><td>Click to save a turn for later. Saved turns appear in the Saved sidebar tab with optional notes.</td></tr>
+</table>
+
+<h3>Sidebar</h3>
+<table>
+  <tr><th>Tab</th><th>Purpose</th></tr>
+  <tr><td><strong>Milestones</strong></td><td>Lists all milestones with status. Click any milestone to jump to its starting prompt in the conversation.</td></tr>
+  <tr><td><strong>Saved</strong></td><td>All bookmarked turns with notes. Click to jump to that turn. Persists across page refreshes (stored in your browser).</td></tr>
+</table>
+
+<h2>4. Understanding Rubrics</h2>
+
+<p>Rubrics are the grading criteria used to evaluate each trajectory. They are auto-generated using a multi-step AI pipeline and then reviewed by the admin. Each rubric is binary: <strong>PASS</strong> or <strong>FAIL</strong>.</p>
+
+<h3>Rubric Fields</h3>
+<table>
+  <tr><th>Field</th><th>Description</th></tr>
+  <tr><td><strong>Criterion</strong></td><td>The specific behavior being evaluated. Should be clear enough to determine PASS/FAIL from the trajectory alone.</td></tr>
+  <tr><td><strong>Type</strong></td><td>One of: <code>correctness</code>, <code>code_style</code>, <code>communication</code>, <code>agent_behavior</code></td></tr>
+  <tr><td><strong>Milestone</strong></td><td>Which milestone this rubric is tied to (or "All" if it spans the entire task)</td></tr>
+  <tr><td><strong>Importance</strong></td><td><code>MUST_FOLLOW</code> (critical), <code>GOOD_TO_HAVE</code> (meaningful signal), or <code>UNIVERSAL</code> (generic, last resort)</td></tr>
+  <tr><td><strong>is_positive</strong></td><td><code>true</code> = PASS means the agent DID this. <code>false</code> = PASS means the agent did NOT do this anti-pattern.</td></tr>
+  <tr><td><strong>Rationale</strong></td><td>Why this rubric matters and what it helps distinguish.</td></tr>
+</table>
+
+<h3 class="page-break">Rubric Types Explained</h3>
+<table>
+  <tr><th>Type</th><th>Scope</th><th>What to Look For</th></tr>
+  <tr><td><strong>correctness</strong></td><td>Final state of the environment</td><td>Were milestones achieved? Does the code meet requirements? Do outputs match expectations?</td></tr>
+  <tr><td><strong>code_style</strong></td><td>Agent-generated code only</td><td>Readability, idiomatic patterns, avoidance of redundancy, use of existing config/constants</td></tr>
+  <tr><td><strong>communication</strong></td><td>Agent-to-user messages</td><td>Clarifying questions, progress updates, explanations, summaries, appropriate conciseness</td></tr>
+  <tr><td><strong>agent_behavior</strong></td><td>Full trajectory of actions</td><td>Planning before coding, reading before editing, reproducing bugs, running tests, recovery from errors</td></tr>
+</table>
+
+<h3>Expected Distribution (20 rubrics per task)</h3>
+<table>
+  <tr><th>Type</th><th>Count</th><th>Typical Importance</th></tr>
+  <tr><td>correctness</td><td>10&ndash;14 (50&ndash;70%)</td><td>Mostly MUST_FOLLOW</td></tr>
+  <tr><td>agent_behavior</td><td>3&ndash;5</td><td>Mix of MUST_FOLLOW and GOOD_TO_HAVE</td></tr>
+  <tr><td>communication</td><td>2&ndash;4</td><td>Mix of MUST_FOLLOW and GOOD_TO_HAVE</td></tr>
+  <tr><td>code_style</td><td>1&ndash;3</td><td>Mostly GOOD_TO_HAVE</td></tr>
+</table>
+
+<h2>5. The Seven Pillars of Good Rubrics</h2>
+<p>When reviewing rubrics in the Trajectory Viewer (or writing your own on Outlier), every rubric should satisfy these principles:</p>
+
+<ol>
+  <li><strong>Atomic</strong> &mdash; One behavior per rubric. If you see "and" connecting two checks, it should be split.</li>
+  <li><strong>Objective</strong> &mdash; Clear PASS/FAIL with no subjectivity. Avoid "good," "clean," "appropriate" unless precisely defined.</li>
+  <li><strong>Self-Contained</strong> &mdash; Evaluable using only the criterion text + trajectory + task definition. No external references needed.</li>
+  <li><strong>Positively Framed</strong> &mdash; When <code>is_positive: true</code>, describe what the agent DOES. When <code>false</code>, describe the specific anti-pattern.</li>
+  <li><strong>Scoped to the Task</strong> &mdash; Tied to specific milestones. Only evaluate behaviors relevant to the problem statement.</li>
+  <li><strong>Unique</strong> &mdash; No two rubrics of the same type should evaluate the same evidence.</li>
+  <li><strong>Not Overfitting</strong> &mdash; Valid alternative approaches must also pass. Rubrics must be tool/harness-agnostic.</li>
+</ol>
+
+<h2>6. Grading Scale (for Outlier)</h2>
+<p>After assigning PASS/FAIL for each rubric on every trajectory, you will assign an overall rating <strong>on Outlier</strong>:</p>
+
+<table>
+  <tr><th>Rating</th><th>Label</th><th>Description</th></tr>
+  <tr><td><strong>5</strong></td><td>Perfect</td><td>Passes all MUST_FOLLOW and nearly all GOOD_TO_HAVE. No significant failures.</td></tr>
+  <tr><td><strong>4</strong></td><td>Good</td><td>Passes all MUST_FOLLOW, most GOOD_TO_HAVE. Minor issues only.</td></tr>
+  <tr><td><strong>3</strong></td><td>Okay</td><td>Passes most MUST_FOLLOW, some GOOD_TO_HAVE gaps. May have needed minor hints.</td></tr>
+  <tr><td><strong>2</strong></td><td>Low Quality</td><td>Fails some MUST_FOLLOW. Needed significant corrections. Poor agent behavior.</td></tr>
+  <tr><td><strong>1</strong></td><td>Bad</td><td>Fails multiple MUST_FOLLOW rubrics. Fundamentally flawed approach.</td></tr>
+</table>
+
+<h2 class="page-break">7. Recommended Workflow</h2>
+
+<ol>
+  <li><strong>Study the task</strong> in the Trajectory Viewer &mdash; read the problem statement, milestones, and guardrails</li>
+  <li><strong>Skim all model cards</strong> on the Overview tab to get a high-level sense of performance differences</li>
+  <li><strong>Read each trajectory</strong> &mdash; focus on milestone boundaries, tool usage patterns, and how the agent handled corrections</li>
+  <li><strong>Bookmark key turns</strong> using the star icon &mdash; add notes about what you noticed (good or bad)</li>
+  <li><strong>Review the rubrics</strong> &mdash; understand what each criterion is asking and which milestone it targets</li>
+  <li><strong>Switch to Outlier</strong> &mdash; complete your PASS/FAIL grading and overall ratings there</li>
+  <li><strong>Write your rationale</strong> on Outlier &mdash; reference specific rubrics and turns that drove your scores</li>
+</ol>
+
+<div class="callout">
+  <strong>Remember:</strong> The Trajectory Viewer is your prep workspace. Outlier is where you submit your work. Do not skip the Outlier submission &mdash; work done only in the Trajectory Viewer is not recorded.
+</div>
+
+<h2>8. Quick-Reference Checklist</h2>
+<p>Use this when reviewing rubrics or writing your own on Outlier:</p>
+<ul class="checklist">
+  <li>Is the criterion atomic? (One behavior only, no "and" bundles)</li>
+  <li>Is it objective? (Clear PASS/FAIL, no subjective words without definition)</li>
+  <li>Is it self-contained? (Evaluable with criterion + trajectory + task definition only)</li>
+  <li>Is it correctly framed? (is_positive: true = describes what agent DOES; false = anti-pattern)</li>
+  <li>Is it scoped to a milestone?</li>
+  <li>Is it unique? (No overlap with other rubrics of the same type)</li>
+  <li>Is it general enough? (Valid alternative approaches would also pass)</li>
+  <li>Is it specific enough? (Bad trajectories would fail)</li>
+  <li>Does it discriminate? (At least one trajectory differs from the others)</li>
+  <li>Is the type correct? (correctness / code_style / communication / agent_behavior)</li>
+  <li>Is the importance correct? (MUST_FOLLOW / GOOD_TO_HAVE / UNIVERSAL)</li>
+</ul>
+
+<h2>9. Common Mistakes to Avoid</h2>
+<ol>
+  <li><strong>Vague criteria</strong> &mdash; "Good formatting," "clean code" without measurable standards</li>
+  <li><strong>Bundled checks</strong> &mdash; Multiple behaviors joined by "and." Split them into separate rubrics.</li>
+  <li><strong>Not self-contained</strong> &mdash; Requiring re-reading the codebase to evaluate. Include all context in the criterion.</li>
+  <li><strong>Overfitting to one trajectory</strong> &mdash; Criteria so specific that only one model's approach passes</li>
+  <li><strong>Harness-specific language</strong> &mdash; Referencing specific tool names or commands. Keep rubrics tool-agnostic.</li>
+  <li><strong>Missing milestone coverage</strong> &mdash; Every milestone should have at least one rubric</li>
+  <li><strong>Non-discriminating rubrics</strong> &mdash; If all trajectories get the same score, the rubric adds no value</li>
+  <li><strong>Ignoring hint-dependence</strong> &mdash; Not penalizing models that needed user corrections when others didn't</li>
+</ol>
+
+<div class="doc-footer">
+  ACC Data Annotation &middot; Scale AI &middot; Trajectory Viewer Platform Guide v1.0<br>
+  Adapted from the Trajectory Rubric Best Practices guide. For questions, contact your project lead.<br>
+  <strong>All grading and submission must be completed on Outlier.</strong>
+</div>
+
+</body>
+</html>

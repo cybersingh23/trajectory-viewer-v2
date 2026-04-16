@@ -268,6 +268,75 @@ body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-se
 .rubric-filters select:focus{border-color:var(--blue);background:rgba(255,255,255,0.06)}
 .rubric-filter-count{font-size:10px;color:var(--text-dim);flex-shrink:0}
 
+/* ═══ SECTION TABS (Rubrics / Grading) ═══ */
+.section-tabs-wrap{margin-bottom:0}
+.section-tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--glass-border)}
+.section-tab{padding:10px 20px;cursor:pointer;color:var(--text-muted);font-size:12px;font-weight:600;border-bottom:2px solid transparent;transition:all .15s;position:relative}
+.section-tab:hover{color:var(--text-sec)}
+.section-tab.active{color:var(--text)}
+.section-tab.active::after{content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;background:currentColor;border-radius:2px}
+.section-tab .stab-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;margin-left:6px;background:rgba(255,255,255,0.05);color:var(--text-dim)}
+.section-tab.active .stab-badge{background:rgba(96,165,250,0.1);color:var(--blue)}
+.section-pane{display:none;padding:20px}
+.section-pane.active{display:block}
+
+/* ═══ GRADING SECTION ═══ */
+.grading-wrap{padding:20px}
+.grading-wrap h3{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-muted);margin-bottom:16px;font-weight:700}
+.grade-progress{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.grade-progress-text{font-size:11px;color:var(--text-muted);font-weight:600}
+.grade-progress-bar{flex:1;height:5px;background:rgba(255,255,255,0.04);border-radius:6px;overflow:hidden}
+.grade-progress-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,#3b82f6,#6366f1);transition:width .4s ease}
+.grade-progress-pct{font-size:11px;font-weight:700;color:var(--blue);font-family:var(--mono)}
+
+.grade-table{width:100%;border-collapse:separate;border-spacing:0;margin-bottom:24px}
+.grade-table th{padding:10px 12px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text-sec);font-weight:700;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--glass-border)}
+.grade-table th:first-child{text-align:left;min-width:200px}
+.grade-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.03);vertical-align:top}
+.grade-table td:first-child{font-size:12px;color:var(--text);line-height:1.5}
+.grade-table tr:hover td{background:rgba(255,255,255,0.015)}
+.grade-rubric-num{font-size:10px;font-weight:700;color:var(--text-dim);font-family:var(--mono);margin-right:6px}
+.grade-rubric-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+
+.grade-cell{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:120px}
+.grade-btns{display:flex;gap:4px}
+.grade-btn{padding:4px 12px;cursor:pointer;font-size:10px;font-weight:700;border-radius:5px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);font-family:inherit;transition:all .15s;text-transform:uppercase;letter-spacing:0.5px}
+.grade-btn:hover{border-color:rgba(255,255,255,0.15);color:var(--text-sec)}
+.grade-btn.gb-pass{border-color:rgba(74,222,128,0.15);color:rgba(74,222,128,0.5)}
+.grade-btn.gb-fail{border-color:rgba(248,113,113,0.15);color:rgba(248,113,113,0.5)}
+.grade-btn.gb-pass.active{background:rgba(74,222,128,0.12);border-color:rgba(74,222,128,0.3);color:var(--green)}
+.grade-btn.gb-fail.active{background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.3);color:var(--red)}
+.grade-rationale{width:100%;padding:4px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-sec);font-size:11px;font-family:inherit;outline:none;resize:none;min-height:28px;transition:border-color .15s}
+.grade-rationale:focus{border-color:var(--blue)}
+.grade-rationale::placeholder{color:var(--text-dim)}
+.grade-rationale.needs-rationale{border-color:rgba(248,113,113,0.4);background:rgba(248,113,113,0.03)}
+.grade-rationale.needs-rationale::placeholder{color:rgba(248,113,113,0.5)}
+
+.final-scores-section{margin-top:8px}
+.final-scores-section h4{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:12px;font-weight:700}
+.final-score-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:20px}
+.final-score-card{padding:16px;border-radius:var(--radius-sm);border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.015)}
+.final-score-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.final-score-name .mc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.score-pills{display:flex;gap:4px;margin-bottom:10px}
+.score-pill{width:36px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:700;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:transparent;color:var(--text-muted);font-family:var(--mono);transition:all .15s}
+.score-pill:hover{border-color:rgba(255,255,255,0.15);color:var(--text-sec)}
+.score-pill.active{background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;border-color:transparent}
+.final-rationale{width:100%;padding:6px 8px;border-radius:4px;border:1px solid rgba(255,255,255,0.06);background:rgba(255,255,255,0.02);color:var(--text-sec);font-size:11px;font-family:inherit;outline:none;resize:vertical;min-height:40px;transition:border-color .15s}
+.final-rationale:focus{border-color:var(--blue)}
+.final-rationale::placeholder{color:var(--text-dim)}
+.final-rationale.needs-rationale{border-color:rgba(248,113,113,0.4);background:rgba(248,113,113,0.03)}
+.final-rationale.needs-rationale::placeholder{color:rgba(248,113,113,0.5)}
+
+.export-btn{padding:8px 20px;cursor:pointer;font-size:12px;font-weight:600;border-radius:8px;border:none;background:linear-gradient(135deg,#3b82f6,#6366f1);color:#fff;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:8px}
+.export-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.export-btn.disabled{opacity:0.4;cursor:not-allowed;filter:none;transform:none}
+.export-btn.disabled:hover{filter:none;transform:none}
+.grading-incomplete{font-size:11px;color:var(--red);margin-right:auto}
+.export-btn svg{flex-shrink:0}
+.grading-footer{display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.04)}
+.grading-save-status{font-size:11px;color:var(--text-dim)}
+
 /* ═══ SCROLLBAR ═══ */
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -353,7 +422,10 @@ var STATE = {
   isAdmin: false,
   rubricFilterType: null,
   rubricFilterMs: null,
-  savedTurns: []
+  savedTurns: [],
+  grades: {},
+  finalScores: {},
+  overviewPane: 'rubrics'
 };
 var LABELS = {bash:'Bash',read:'Read',edit:'Edit',grep:'Grep',glob:'Glob',write:'Write',task:'Task',apply_patch:'Patch',question:'Ask',todowrite:'Todo',agent:'Agent'};
 
@@ -438,6 +510,29 @@ function toast(msg) {
 
     STATE.modelOrder = Object.keys(STATE.models).sort();
 
+    // Load grading data
+    if (!me.isAdmin) {
+      try {
+        var [gradesRes, scoresRes] = await Promise.all([
+          fetch('/api/user/grades'),
+          fetch('/api/user/final-scores')
+        ]);
+        if (gradesRes.ok) {
+          var gradesArr = await gradesRes.json();
+          gradesArr.forEach(function(g) {
+            var key = g.rubric_id + '|' + g.model_name;
+            STATE.grades[key] = { verdict: g.verdict, rationale: g.rationale || '' };
+          });
+        }
+        if (scoresRes.ok) {
+          var scoresArr = await scoresRes.json();
+          scoresArr.forEach(function(s) {
+            STATE.finalScores[s.model_name] = { score: s.score, rationale: s.rationale || '' };
+          });
+        }
+      } catch(e) { console.warn('Failed to load grades:', e); }
+    }
+
     // Show app
     document.getElementById('loading').style.display = 'none';
     document.getElementById('app').style.display = 'flex';
@@ -499,8 +594,8 @@ function computeMetrics(model) {
     msDetails.push({ id: ms.milestone_id, prompt: ms.prompt || '', criteria: ms.continuation_criteria || '', interactions: ms.planned_interactions_list || [], status: status, turnCount: prog ? prog.turn_count : null, startTurn: prog ? prog.started_at_turn : null, endTurn: prog ? prog.completed_at_turn : null });
   });
 
-  var userTexts = model.turns.filter(function(t) { return t.role === 'user'; }).map(function(t) { return (t.content || '').toLowerCase(); });
-  var allTexts = model.turns.map(function(t) { return (t.content || '').toLowerCase(); });
+  var userTexts = model.turns.filter(function(t) { return t.role === 'user'; }).map(function(t) { return contentToStr(t.content).toLowerCase(); });
+  var allTexts = model.turns.map(function(t) { return contentToStr(t.content).toLowerCase(); });
   var intTotal = 0, intMatched = 0, intDetails = [];
   milestones.forEach(function(ms) {
     (ms.planned_interactions_list || []).forEach(function(intr) {
@@ -656,10 +751,7 @@ function renderOverviewView() {
     html += '</tbody></table></div>';
   }
 
-  // Rubrics section (task-level, shared across all trajectories)
-  html += '<div class="cv-rubrics-wrap glass">';
-
-  // Build filter options
+  // Build filter options (shared by both rubrics and grading panes)
   var rubricTypes = [], rubricMs = [];
   STATE.rubrics.forEach(function(r) {
     var t = r.type || 'correctness';
@@ -673,6 +765,36 @@ function renderOverviewView() {
     if (STATE.rubricFilterMs && (r.milestone_id || '') !== STATE.rubricFilterMs) return false;
     return true;
   });
+
+  // Compute grading progress for badge
+  var showGrading = filtered.length && !STATE.isAdmin;
+  var gradePct = 0, totalGradeable = 0, doneCount = 0;
+  if (showGrading) {
+    totalGradeable = filtered.length * STATE.modelOrder.length + STATE.modelOrder.length;
+    filtered.forEach(function(r) {
+      STATE.modelOrder.forEach(function(mk) {
+        var g = STATE.grades[r.id + '|' + mk];
+        if (g && g.verdict !== 'unset' && g.rationale && g.rationale.trim()) doneCount++;
+      });
+    });
+    STATE.modelOrder.forEach(function(mk) {
+      var fs = STATE.finalScores[mk];
+      if (fs && fs.score && fs.rationale && fs.rationale.trim()) doneCount++;
+    });
+    gradePct = totalGradeable ? Math.round(doneCount / totalGradeable * 100) : 0;
+  }
+
+  // ── Tabbed container for Rubrics + Grading ──
+  html += '<div class="glass section-tabs-wrap">';
+  html += '<div class="section-tabs">';
+  html += '<div class="section-tab' + (STATE.overviewPane === 'rubrics' ? ' active' : '') + '" data-pane="rubrics" onclick="switchOverviewPane(\'rubrics\')">Rubrics<span class="stab-badge">' + STATE.rubrics.length + '</span></div>';
+  if (showGrading) {
+    html += '<div class="section-tab' + (STATE.overviewPane === 'grading' ? ' active' : '') + '" data-pane="grading" onclick="switchOverviewPane(\'grading\')">Grading<span class="stab-badge">' + gradePct + '%</span></div>';
+  }
+  html += '</div>';
+
+  // ── Rubrics pane ──
+  html += '<div class="section-pane' + (STATE.overviewPane === 'rubrics' ? ' active' : '') + '" id="spane-rubrics">';
 
   html += '<div class="cv-rubrics-header">';
   html += '<h3>Evaluation Rubrics</h3>';
@@ -725,7 +847,82 @@ function renderOverviewView() {
   } else {
     html += '<div class="cv-no-rubrics">No rubrics yet. ' + (STATE.isAdmin ? 'Generate them from the <a href="/admin.html" style="color:var(--blue)">Admin panel</a>.' : 'Ask your admin to generate rubrics for this task.') + '</div>';
   }
-  html += '</div>';
+  html += '</div>'; // end rubrics pane
+
+  // ── Grading pane ──
+  if (showGrading) {
+    html += '<div class="section-pane' + (STATE.overviewPane === 'grading' ? ' active' : '') + '" id="spane-grading">';
+
+    // Progress bar
+    html += '<div class="grade-progress">';
+    html += '<span class="grade-progress-text">Progress</span>';
+    html += '<div class="grade-progress-bar"><div class="grade-progress-fill" id="grade-progress-fill" style="width:' + gradePct + '%"></div></div>';
+    html += '<span class="grade-progress-pct" id="grade-progress-pct">' + gradePct + '%</span>';
+    html += '</div>';
+
+    // Grade table: rubrics x models
+    html += '<table class="grade-table"><thead><tr>';
+    html += '<th>Rubric</th>';
+    STATE.modelOrder.forEach(function(mk) {
+      html += '<th>' + esc(formatModelName(mk)) + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    filtered.forEach(function(r, i) {
+      var importClass = r.importance === 'MUST_FOLLOW' ? 'tag-must' : r.importance === 'GOOD_TO_HAVE' ? 'tag-good' : 'tag-universal';
+      html += '<tr>';
+      html += '<td><span class="grade-rubric-num">' + (i + 1) + '.</span>' + esc(r.criterion);
+      html += '<div class="grade-rubric-tags">';
+      if (r.milestone_id) html += '<span class="rubric-tag tag-milestone">' + esc(r.milestone_id) + '</span>';
+      html += '<span class="rubric-tag ' + importClass + '">' + r.importance + '</span>';
+      html += '</div></td>';
+
+      STATE.modelOrder.forEach(function(mk) {
+        var g = STATE.grades[r.id + '|' + mk] || { verdict: 'unset', rationale: '' };
+        html += '<td><div class="grade-cell">';
+        html += '<div class="grade-btns">';
+        html += '<button class="grade-btn gb-pass' + (g.verdict === 'pass' ? ' active' : '') + '" id="gp-' + r.id + '-' + mk + '" onclick="setGrade(\'' + r.id + '\',\'' + esc(mk) + '\',\'pass\')">Pass</button>';
+        html += '<button class="grade-btn gb-fail' + (g.verdict === 'fail' ? ' active' : '') + '" id="gf-' + r.id + '-' + mk + '" onclick="setGrade(\'' + r.id + '\',\'' + esc(mk) + '\',\'fail\')">Fail</button>';
+        html += '</div>';
+        html += '<textarea class="grade-rationale' + (g.verdict !== 'unset' && !g.rationale.trim() ? ' needs-rationale' : '') + '" id="gr-' + r.id + '-' + mk + '" placeholder="Rationale (required)" oninput="saveGradeRationale(\'' + r.id + '\',\'' + esc(mk) + '\')">' + esc(g.rationale) + '</textarea>';
+        html += '</div></td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+
+    // Final scores
+    var colors = ['#6366f1','#3b82f6','#06b6d4','#8b5cf6','#ec4899'];
+    html += '<div class="final-scores-section">';
+    html += '<h4>Final Scores (1-5)</h4>';
+    html += '<div class="final-score-grid">';
+    STATE.modelOrder.forEach(function(mk, idx) {
+      var fs = STATE.finalScores[mk] || { score: null, rationale: '' };
+      var dotColor = colors[idx % colors.length];
+      html += '<div class="final-score-card">';
+      html += '<div class="final-score-name"><span class="mc-dot" style="background:' + dotColor + '"></span>' + esc(formatModelName(mk)) + '</div>';
+      html += '<div class="score-pills">';
+      for (var s = 1; s <= 5; s++) {
+        html += '<button class="score-pill' + (fs.score === s ? ' active' : '') + '" id="fs-' + mk + '-' + s + '" onclick="setFinalScore(\'' + esc(mk) + '\',' + s + ')">' + s + '</button>';
+      }
+      html += '</div>';
+      html += '<textarea class="final-rationale' + (fs.score && !fs.rationale.trim() ? ' needs-rationale' : '') + '" id="fsr-' + mk + '" placeholder="Overall rationale (required)" oninput="saveFinalScoreRationale(\'' + esc(mk) + '\')">' + esc(fs.rationale) + '</textarea>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+
+    // Footer with export + save status
+    // Compute completeness for export gating
+    var exportComplete = gradePct === 100 && doneCount === totalGradeable;
+    html += '<div class="grading-footer">';
+    html += '<span class="grading-save-status" id="grading-save-status">Auto-saves on change</span>';
+    html += '<span class="grading-incomplete" id="grading-missing">' + (exportComplete ? '' : (totalGradeable - doneCount) + ' item' + (totalGradeable - doneCount !== 1 ? 's' : '') + ' remaining') + '</span>';
+    html += '<button class="export-btn' + (exportComplete ? '' : ' disabled') + '" id="export-btn" onclick="exportGrading()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export JSON</button>';
+    html += '</div>';
+    html += '</div>'; // end grading pane
+  }
+
+  html += '</div>'; // end tabbed container
 
   html += '</div>';
   el.innerHTML = html;
@@ -787,7 +984,7 @@ function renderConvoSimple(el, model) {
   if (cur) groups.push(cur);
   var html = '';
   groups.forEach(function(g, idx) {
-    var userText = g.user ? (g.user.content || '(no content)') : '(no user prompt)';
+    var userText = g.user ? (contentToStr(g.user.content) || '(no content)') : '(no user prompt)';
     var msId = msMap[idx];
     var isSaved = STATE.savedTurns.some(function(s) { return s.modelKey === model.key && s.promptIdx === idx; });
     html += '<div class="turn-group' + (msId ? ' ms-start' : '') + '" id="prompt-' + idx + '">';
@@ -800,7 +997,7 @@ function renderConvoSimple(el, model) {
     html += '</div>';
     html += '<div class="turn-body open" id="tbody_' + idx + '">';
     if (g.user) html += '<div class="msg-user"><div class="msg-user-label">User</div><div class="msg-user-text">' + esc(userText) + '</div></div>';
-    g.assistants.forEach(function(a) { html += '<div class="msg-asst"><div class="asst-text">' + esc(a.content || '(no response)') + '</div></div>'; });
+    g.assistants.forEach(function(a) { html += '<div class="msg-asst"><div class="asst-text">' + esc(contentToStr(a.content) || '(no response)') + '</div></div>'; });
     html += '</div></div>';
   });
   el.innerHTML = html;
@@ -1156,7 +1353,7 @@ function msPromptToIdx(model, msPrompt) {
   var bestIdx = -1, bestScore = 0, promptIdx = 0;
   for (var i = 0; i < model.turns.length; i++) {
     if (model.turns[i].role !== 'user') continue;
-    var hay = (model.turns[i].content || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    var hay = contentToStr(model.turns[i].content).toLowerCase().replace(/\s+/g, ' ').trim();
     if (hay.indexOf(sig) !== -1) return promptIdx;
     var words = sig.split(' ').filter(function(w) { return w.length > 3; });
     if (words.length) {
@@ -1202,6 +1399,12 @@ function getIntsForMs(mk, msId) {
    ═══════════════════════════════════════════════════════════ */
 function esc(s) { if (!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function trunc(s, n) { if (!s) return ''; s = String(s).trim(); return s.length > n ? s.slice(0, n) + '\n\u2026 (truncated)' : s; }
+function contentToStr(c) {
+  if (!c) return '';
+  if (typeof c === 'string') return c;
+  if (Array.isArray(c)) return c.map(function(p) { return p.text || ''; }).join('\n');
+  return String(c);
+}
 function formatModelName(dir) {
   var n = dir.replace(/^vm-/, '');
   n = n.replace(/-(\d+)-(\d+)/g, ' $1.$2').replace(/-/g, ' ');
@@ -1219,6 +1422,142 @@ function toolLabel(tn, inp) {
   if (tn === 'question') { var qs = inp.questions || []; return qs.length ? (qs[0].header || qs[0].question || '').slice(0, 60) : 'question'; }
   if (tn === 'todowrite') { var td = inp.todos || []; return td.length + ' item' + (td.length !== 1 ? 's' : ''); }
   return tn;
+}
+
+function switchOverviewPane(pane) {
+  STATE.overviewPane = pane;
+  document.querySelectorAll('.section-tab').forEach(function(t) { t.classList.toggle('active', t.dataset.pane === pane); });
+  document.querySelectorAll('.section-pane').forEach(function(p) { p.classList.toggle('active', p.id === 'spane-' + pane); });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GRADING
+   ═══════════════════════════════════════════════════════════ */
+var _gradeTimers = {};
+function _debounce(key, fn, ms) {
+  if (_gradeTimers[key]) clearTimeout(_gradeTimers[key]);
+  _gradeTimers[key] = setTimeout(fn, ms || 600);
+}
+
+function setGrade(rubricId, modelName, verdict) {
+  var key = rubricId + '|' + modelName;
+  var existing = STATE.grades[key] || { verdict: 'unset', rationale: '' };
+  var newVerdict = existing.verdict === verdict ? 'unset' : verdict;
+  STATE.grades[key] = { verdict: newVerdict, rationale: existing.rationale };
+  var passBtn = document.getElementById('gp-' + rubricId + '-' + modelName);
+  var failBtn = document.getElementById('gf-' + rubricId + '-' + modelName);
+  var ratEl = document.getElementById('gr-' + rubricId + '-' + modelName);
+  if (passBtn) passBtn.classList.toggle('active', newVerdict === 'pass');
+  if (failBtn) failBtn.classList.toggle('active', newVerdict === 'fail');
+  // Highlight rationale if verdict set but no rationale
+  if (ratEl) ratEl.classList.toggle('needs-rationale', newVerdict !== 'unset' && !existing.rationale.trim());
+  updateGradeProgress();
+  fetch('/api/user/grades', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rubricId: rubricId, modelName: modelName, verdict: newVerdict, rationale: existing.rationale })
+  }).then(function() { showSaveStatus('Saved'); });
+}
+
+function saveGradeRationale(rubricId, modelName) {
+  var key = rubricId + '|' + modelName;
+  var el = document.getElementById('gr-' + rubricId + '-' + modelName);
+  if (!el) return;
+  var existing = STATE.grades[key] || { verdict: 'unset', rationale: '' };
+  STATE.grades[key] = { verdict: existing.verdict, rationale: el.value };
+  el.classList.toggle('needs-rationale', existing.verdict !== 'unset' && !el.value.trim());
+  updateGradeProgress();
+  _debounce('gr-' + key, function() {
+    fetch('/api/user/grades', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rubricId: rubricId, modelName: modelName, verdict: existing.verdict, rationale: el.value })
+    }).then(function() { showSaveStatus('Saved'); });
+  });
+}
+
+function setFinalScore(modelName, score) {
+  var existing = STATE.finalScores[modelName] || { score: null, rationale: '' };
+  var newScore = existing.score === score ? null : score;
+  STATE.finalScores[modelName] = { score: newScore, rationale: existing.rationale };
+  for (var i = 1; i <= 5; i++) {
+    var pill = document.getElementById('fs-' + modelName + '-' + i);
+    if (pill) pill.classList.toggle('active', i === newScore);
+  }
+  var ratEl = document.getElementById('fsr-' + modelName);
+  if (ratEl) ratEl.classList.toggle('needs-rationale', newScore && !existing.rationale.trim());
+  updateGradeProgress();
+  fetch('/api/user/final-scores', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ modelName: modelName, score: newScore, rationale: existing.rationale })
+  }).then(function() { showSaveStatus('Saved'); });
+}
+
+function saveFinalScoreRationale(modelName) {
+  var el = document.getElementById('fsr-' + modelName);
+  if (!el) return;
+  var existing = STATE.finalScores[modelName] || { score: null, rationale: '' };
+  STATE.finalScores[modelName] = { score: existing.score, rationale: el.value };
+  el.classList.toggle('needs-rationale', existing.score && !el.value.trim());
+  updateGradeProgress();
+  _debounce('fsr-' + modelName, function() {
+    fetch('/api/user/final-scores', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modelName: modelName, score: existing.score, rationale: el.value })
+    }).then(function() { showSaveStatus('Saved'); });
+  });
+}
+
+function updateGradeProgress() {
+  // Each grade needs verdict + rationale; each final score needs score + rationale
+  var total = STATE.rubrics.length * STATE.modelOrder.length + STATE.modelOrder.length;
+  var done = 0, missing = 0;
+  STATE.rubrics.forEach(function(r) {
+    STATE.modelOrder.forEach(function(mk) {
+      var g = STATE.grades[r.id + '|' + mk];
+      if (g && g.verdict !== 'unset' && g.rationale && g.rationale.trim()) done++;
+      else if (g && g.verdict !== 'unset' && (!g.rationale || !g.rationale.trim())) missing++;
+    });
+  });
+  STATE.modelOrder.forEach(function(mk) {
+    var fs = STATE.finalScores[mk];
+    if (fs && fs.score && fs.rationale && fs.rationale.trim()) done++;
+    else if (fs && fs.score && (!fs.rationale || !fs.rationale.trim())) missing++;
+  });
+  var pct = total ? Math.round(done / total * 100) : 0;
+  var bar = document.getElementById('grade-progress-fill');
+  var txt = document.getElementById('grade-progress-pct');
+  var tabBadge = document.querySelector('.section-tab[data-pane="grading"] .stab-badge');
+  if (bar) bar.style.width = pct + '%';
+  if (txt) txt.textContent = pct + '%';
+  if (tabBadge) tabBadge.textContent = pct + '%';
+  // Update export button
+  var exportBtn = document.getElementById('export-btn');
+  var missingMsg = document.getElementById('grading-missing');
+  var isComplete = done === total && total > 0;
+  if (exportBtn) exportBtn.classList.toggle('disabled', !isComplete);
+  if (missingMsg) {
+    if (missing > 0) missingMsg.textContent = missing + ' rationale' + (missing !== 1 ? 's' : '') + ' missing';
+    else if (done < total) missingMsg.textContent = (total - done) + ' item' + (total - done !== 1 ? 's' : '') + ' remaining';
+    else missingMsg.textContent = '';
+  }
+}
+
+function showSaveStatus(msg) {
+  var el = document.getElementById('grading-save-status');
+  if (el) { el.textContent = msg + ' \u2713'; setTimeout(function() { el.textContent = 'Auto-saves on change'; }, 1500); }
+}
+
+function exportGrading() {
+  var exportBtn = document.getElementById('export-btn');
+  if (exportBtn && exportBtn.classList.contains('disabled')) {
+    toast('Complete all grades and rationales before exporting');
+    return;
+  }
+  var apiBase = STATE.isAdmin ? '/api/admin/tasks/' + new URLSearchParams(window.location.search).get('task') + '/export' : '/api/user/export';
+  window.open(apiBase, '_blank');
 }
 
 /* ═══════════════════════════════════════════════════════════

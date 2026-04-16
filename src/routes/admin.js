@@ -89,6 +89,14 @@ router.post('/tasks/:id/rubrics', (req, res) => {
   res.json({ id });
 });
 
+// Export grading data for a task
+router.get('/tasks/:id/export', (req, res) => {
+  const data = db.getTaskExport(req.params.id);
+  if (!data) return res.status(404).json({ error: 'Task not found' });
+  res.setHeader('Content-Disposition', 'attachment; filename=grading-export-' + req.params.id.slice(0, 8) + '.json');
+  res.json(data);
+});
+
 // Export all credentials as CSV
 router.get('/credentials/export', (req, res) => {
   const creds = db.getAllCredentials();

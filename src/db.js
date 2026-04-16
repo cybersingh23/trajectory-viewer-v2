@@ -68,6 +68,27 @@ export function initDb() {
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS grades (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      rubric_id TEXT NOT NULL REFERENCES rubrics(id) ON DELETE CASCADE,
+      model_name TEXT NOT NULL,
+      verdict TEXT NOT NULL DEFAULT 'unset',
+      rationale TEXT DEFAULT '',
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(task_id, rubric_id, model_name)
+    );
+
+    CREATE TABLE IF NOT EXISTS final_scores (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      model_name TEXT NOT NULL,
+      score INTEGER,
+      rationale TEXT DEFAULT '',
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(task_id, model_name)
+    );
   `);
 
   // Migrate: add plain_password column if missing
@@ -106,7 +127,7 @@ export function getTasks() {
   const tasks = db.prepare('SELECT * FROM tasks ORDER BY created_at DESC').all();
   return tasks.map(t => {
     const models = db.prepare('SELECT id, model_name FROM trajectories WHERE task_id = ?').all(t.id);
-    const user = db.prepare('SELECT username, password FROM users WHERE task_id = ? AND is_admin = 0').get(t.id);
+    const user = db.prepare('SELECT username, COALESCE(plain_password, password) as password FROM users WHERE task_id = ? AND is_admin = 0').get(t.id);
     const rubricCount = db.prepare('SELECT COUNT(*) as cnt FROM rubrics WHERE task_id = ?').get(t.id).cnt;
     return { ...t, models, user, rubricCount };
   });
@@ -155,7 +176,7 @@ export function authenticate(username, password) {
 
 export function getAllCredentials() {
   return db.prepare(`
-    SELECT u.username, u.plain_password as password, t.name as task_name
+    SELECT u.username, COALESCE(u.plain_password, u.password) as password, t.name as task_name
     FROM users u JOIN tasks t ON u.task_id = t.id
     WHERE u.is_admin = 0
     ORDER BY t.name
@@ -198,4 +219,52 @@ export function deleteRubric(id) {
 
 export function clearRubrics(taskId) {
   db.prepare('DELETE FROM rubrics WHERE task_id = ?').run(taskId);
+}
+
+// ── Grade operations ──
+
+export function upsertGrade(taskId, rubricId, modelName, verdict, rationale) {
+  const id = genId();
+  db.prepare(`INSERT INTO grades (id, task_id, rubric_id, model_name, verdict, rationale)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(task_id, rubric_id, model_name) DO UPDATE SET
+      verdict = excluded.verdict,
+      rationale = excluded.rationale,
+      updated_at = datetime('now')
+  `).run(id, taskId, rubricId, modelName, verdict, rationale || '');
+}
+
+export function getGrades(taskId) {
+  return db.prepare('SELECT * FROM grades WHERE task_id = ?').all(taskId);
+}
+
+// ── Final score operations ──
+
+export function upsertFinalScore(taskId, modelName, score, rationale) {
+  const id = genId();
+  db.prepare(`INSERT INTO final_scores (id, task_id, model_name, score, rationale)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(task_id, model_name) DO UPDATE SET
+      score = excluded.score,
+      rationale = excluded.rationale,
+      updated_at = datetime('now')
+  `).run(id, taskId, modelName, score, rationale || '');
+}
+
+export function getFinalScores(taskId) {
+  return db.prepare('SELECT * FROM final_scores WHERE task_id = ?').all(taskId);
+}
+
+// ── Export ──
+
+export function getTaskExport(taskId) {
+  const task = getTask(taskId);
+  if (!task) return null;
+  const rubrics = getRubrics(taskId);
+  const grades = getGrades(taskId);
+  const finalScores = getFinalScores(taskId);
+  const trajectories = getTrajectories(taskId).map(t => ({
+    id: t.id, model_name: t.model_name
+  }));
+  return { task: { id: task.id, name: task.name }, rubrics, grades, finalScores, trajectories };
 }

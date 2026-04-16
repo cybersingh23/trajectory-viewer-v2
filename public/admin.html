@@ -180,7 +180,7 @@ input[type=file]{display:none}
     <div class="upload-zone" id="upload-zone">
       <div class="uz-icon">&#128193;</div>
       <h2>Upload a task folder</h2>
-      <p>Drop a folder containing model directories<br>Each should have <b>task.json</b>, <b>trajectories/</b>, and optionally <b>opencode_export.json</b></p>
+      <p>Drop a folder containing model directories<br>Supports flat format (task.json + model dirs) and nested variant format (claude_md_used.txt)</p>
     </div>
     <input type="file" id="fi-folder" webkitdirectory multiple>
 
@@ -289,12 +289,85 @@ function handleFileList(fileList) {
 function readJSON(file) { return new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { try { res(JSON.parse(e.target.result)); } catch(err) { res(null); } }; r.readAsText(file); }); }
 function readText(file) { return new Promise(function(res) { var r = new FileReader(); r.onload = function(e) { res(e.target.result); }; r.readAsText(file); }); }
 
+/* ── Parse claude_md_used.txt into taskJson format ── */
+function parseClaudeMd(text) {
+  var result = { task_title: null, problem_statement: null, language: null, difficulty: null, user_intent: { milestones: [], guardrails: {} } };
+
+  // Split into ## sections
+  var sections = {};
+  var sectionPattern = /^##\s+(.+)$/gm;
+  var match, lastKey = null, lastIdx = 0;
+  var headings = [];
+  while ((match = sectionPattern.exec(text)) !== null) {
+    headings.push({ key: match[1].trim(), idx: match.index, end: match.index + match[0].length });
+  }
+  for (var i = 0; i < headings.length; i++) {
+    var start = headings[i].end;
+    var end = i + 1 < headings.length ? headings[i + 1].idx : text.length;
+    sections[headings[i].key.toLowerCase()] = text.slice(start, end).trim();
+  }
+
+  // Problem statement from "The Task" section
+  var taskSec = sections['the task'];
+  if (taskSec) result.problem_statement = taskSec.trim();
+
+  // Fallback: use "High Level Goals" from persona
+  if (!result.problem_statement) {
+    var personaSec = sections['your persona'];
+    if (personaSec) {
+      var goalsMatch = personaSec.match(/\*\*High Level Goals\*\*:\s*(.+)/i);
+      if (goalsMatch) result.problem_statement = goalsMatch[1].trim();
+    }
+  }
+
+  // Parse milestones
+  var msSec = null;
+  for (var sk in sections) {
+    if (sk.indexOf('milestone') !== -1) { msSec = sections[sk]; break; }
+  }
+  if (msSec) {
+    var msBlocks = msSec.split(/^###\s+Milestone\s+/gm).filter(Boolean);
+    msBlocks.forEach(function(block) {
+      var idMatch = block.match(/^(\S+)/);
+      if (!idMatch) return;
+      var ms = { milestone_id: idMatch[1], prompt: '', continuation_criteria: '', planned_interactions_list: [] };
+
+      // Prompt
+      var promptMatch = block.match(/\*\*Your message for this milestone\*\*:\s*([\s\S]*?)(?=\n\*\*|$)/i);
+      if (promptMatch) ms.prompt = promptMatch[1].trim();
+
+      // Continuation criteria
+      var critMatch = block.match(/\*\*Do NOT advance until ALL of these are true\*\*:[^\n]*\n([\s\S]*?)(?=\n\*\*Planned|$)/i);
+      if (critMatch) ms.continuation_criteria = critMatch[1].trim();
+
+      // Planned interactions
+      var triggerPattern = /- TRIGGER:\s*"([^"]+)"\s*\n\s*YOUR RESPONSE \(word for word\):\s*"([^"]+)"/gi;
+      var tm;
+      while ((tm = triggerPattern.exec(block)) !== null) {
+        ms.planned_interactions_list.push({ trigger: tm[1], reaction: tm[2] });
+      }
+
+      result.user_intent.milestones.push(ms);
+    });
+  }
+
+  // Guardrails
+  var guardSec = sections['guardrails'];
+  if (guardSec) {
+    var maxMatch = guardSec.match(/\*\*Maximum turns\*\*:\s*(\d+)/i);
+    if (maxMatch) result.user_intent.guardrails.max_turns = parseInt(maxMatch[1]);
+  }
+
+  return result;
+}
+
 async function processUpload(files) {
   uz.querySelector('h2').textContent = 'Processing...';
 
-  // Group files by model directory (auto-detect: first subdir level that isn't the root)
-  var groups = {}, ungrouped = [], taskJson = null, taskName = '';
-  // Find the common root prefix depth (the dropped folder itself)
+  // Detect format: claude_md_used.txt present means nested variant format
+  var hasClaudeMd = files.some(function(f) { return (f._path || f.name).split('/').pop() === 'claude_md_used.txt'; });
+
+  // Find root depth
   var rootDepth = Infinity;
   files.forEach(function(f) {
     var parts = (f._path || f.name).split('/');
@@ -302,11 +375,17 @@ async function processUpload(files) {
   });
   if (rootDepth === Infinity) rootDepth = 0;
 
+  if (hasClaudeMd) {
+    await processNestedUpload(files, rootDepth);
+    return;
+  }
+
+  // ── Flat format (original logic) ──
+  var groups = {}, ungrouped = [], taskJson = null, taskName = '';
+
   files.forEach(function(f) {
     var path = f._path || f.name, parts = path.split('/');
-    // Model dir is one level below the root folder
     var modelDir = parts.length > rootDepth + 1 ? parts[rootDepth] : null;
-    // Skip the root-level task.json from being grouped — handle it separately
     var fname = parts[parts.length - 1];
     if (!modelDir || (parts.length === rootDepth + 2 && fname === 'task.json')) { ungrouped.push(f); return; }
     if (!groups[modelDir]) groups[modelDir] = [];
@@ -316,18 +395,13 @@ async function processUpload(files) {
   var modelKeys = Object.keys(groups);
   if (!modelKeys.length) { uz.querySelector('h2').textContent = 'No valid files found'; return; }
 
-  // Find task.json from first model or root
   for (var mk of modelKeys) {
     for (var f of groups[mk]) {
       var fname = f.name || (f._path || '').split('/').pop();
-      if (fname === 'task.json' && !taskJson) {
-        taskJson = await readJSON(f);
-        break;
-      }
+      if (fname === 'task.json' && !taskJson) { taskJson = await readJSON(f); break; }
     }
     if (taskJson) break;
   }
-  // Also check ungrouped
   if (!taskJson) {
     for (var uf of ungrouped) {
       if ((uf.name || '').toLowerCase() === 'task.json') { taskJson = await readJSON(uf); break; }
@@ -336,7 +410,6 @@ async function processUpload(files) {
 
   taskName = (taskJson && (taskJson.task_title || taskJson.name)) || 'Task ' + new Date().toISOString().slice(0,10);
 
-  // Build models array
   var models = [];
   for (var key of modelKeys) {
     var g = groups[key];
@@ -352,7 +425,6 @@ async function processUpload(files) {
   }
 
   uz.querySelector('h2').textContent = 'Uploading to server...';
-
   try {
     var res = await fetch('/api/admin/tasks', {
       method: 'POST',
@@ -367,6 +439,106 @@ async function processUpload(files) {
   } catch(err) {
     uz.querySelector('h2').textContent = 'Upload failed: ' + err.message;
   }
+}
+
+/* ── Nested format: variant dirs containing model dirs ── */
+async function processNestedUpload(files, rootDepth) {
+  // Find actual structure by locating claude_md_used.txt and working backwards
+  // Path: root/variant/model/claude_md_used.txt  (4 parts if root is 1 level)
+  var samplePath = null;
+  for (var sf of files) {
+    if ((sf._path || sf.name).split('/').pop() === 'claude_md_used.txt') { samplePath = sf._path || sf.name; break; }
+  }
+  // samplePath = "slrparser/1e68lqqb/claude-opus-4-6/claude_md_used.txt"
+  // model is at index -2, variant at -3, root at everything before variant
+  var sampleParts = samplePath.split('/');
+  var modelIdx = sampleParts.length - 2;  // index of model dir
+  var variantIdx = modelIdx - 1;           // index of variant dir
+  var rootName = sampleParts.slice(0, variantIdx).join('/') || sampleParts[0] || 'Task';
+
+  // Look for a task.json at root level (outside variants)
+  var rootTaskJson = null;
+  for (var rtf of files) {
+    var rtParts = (rtf._path || rtf.name).split('/');
+    var rtFname = rtParts[rtParts.length - 1];
+    // task.json should be above the variant level
+    if (rtFname === 'task.json' && rtParts.length <= variantIdx + 1) {
+      rootTaskJson = await readJSON(rtf);
+      break;
+    }
+  }
+
+  // Group: variantId -> modelName -> [files]
+  var variantGroups = {};
+  files.forEach(function(f) {
+    var parts = (f._path || f.name).split('/');
+    if (parts.length < variantIdx + 3) return;
+    var variantId = parts[variantIdx];
+    var modelName = parts[variantIdx + 1];
+    if (!variantGroups[variantId]) variantGroups[variantId] = {};
+    if (!variantGroups[variantId][modelName]) variantGroups[variantId][modelName] = [];
+    variantGroups[variantId][modelName].push(f);
+  });
+
+  var variantIds = Object.keys(variantGroups);
+  if (!variantIds.length) { uz.querySelector('h2').textContent = 'No valid files found'; return; }
+
+  var created = 0, total = variantIds.length;
+  for (var vi = 0; vi < variantIds.length; vi++) {
+    var variantId = variantIds[vi];
+    var modelMap = variantGroups[variantId];
+    var modelNames = Object.keys(modelMap);
+    uz.querySelector('h2').textContent = 'Uploading variant ' + (vi + 1) + ' of ' + total + '...';
+
+    // Use root task.json if available, otherwise parse claude_md_used.txt
+    var taskJson = rootTaskJson ? JSON.parse(JSON.stringify(rootTaskJson)) : null;
+    if (!taskJson) {
+      for (var mn of modelNames) {
+        if (taskJson) break;
+        for (var f of modelMap[mn]) {
+          if ((f._path || f.name).split('/').pop() === 'claude_md_used.txt') {
+            var mdText = await readText(f);
+            taskJson = parseClaudeMd(mdText);
+            break;
+          }
+        }
+      }
+    }
+    if (!taskJson) taskJson = { problem_statement: null, user_intent: { milestones: [], guardrails: {} } };
+    var displayName = (taskJson.task_title || rootName) + ' / ' + variantId;
+    taskJson.task_title = displayName;
+
+    // Build models array
+    var models = [];
+    for (var mName of modelNames) {
+      var mFiles = modelMap[mName];
+      var model = { name: mName, trajectoryJson: null, opencodeJson: null, milestoneProgress: null };
+      for (var file of mFiles) {
+        var fn = (file._path || file.name).split('/').pop();
+        if (fn === 'opencode_export.json') model.opencodeJson = await readJSON(file);
+        else if (fn === 'trajectory.json') model.trajectoryJson = await readJSON(file);
+        else if (fn === 'milestone_progress.jsonl') model.milestoneProgress = await readText(file);
+      }
+      models.push(model);
+    }
+
+    try {
+      var res = await fetch('/api/admin/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: taskJson.task_title, taskJson: taskJson, models: models })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      created++;
+    } catch(err) {
+      console.error('Failed to upload variant ' + variantId + ':', err);
+    }
+  }
+
+  toast(created + ' task' + (created !== 1 ? 's' : '') + ' created from ' + total + ' variant' + (total !== 1 ? 's' : ''));
+  uz.querySelector('h2').textContent = 'Upload a task folder';
+  loadTasks();
 }
 
 // ═══════════════════════════════════════════════
