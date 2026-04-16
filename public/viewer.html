@@ -1557,7 +1557,7 @@ function exportGrading() {
     toast('Complete all grades and rationales before exporting');
     return;
   }
-  var apiBase = STATE.isAdmin ? '/api/admin/tasks/' + new URLSearchParams(window.location.search).get('task') + '/export' : '/api/user/export';
+  var apiBase = STATE.isAdmin ? BASE_PATH + '/api/admin/tasks/' + new URLSearchParams(window.location.search).get('task') + '/export' : BASE_PATH + '/api/user/export';
   window.open(apiBase, '_blank');
 }
 

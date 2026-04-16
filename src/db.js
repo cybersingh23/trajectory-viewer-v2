@@ -261,10 +261,48 @@ export function getTaskExport(taskId) {
   const task = getTask(taskId);
   if (!task) return null;
   const rubrics = getRubrics(taskId);
-  const grades = getGrades(taskId);
-  const finalScores = getFinalScores(taskId);
-  const trajectories = getTrajectories(taskId).map(t => ({
-    id: t.id, model_name: t.model_name
+  const rawGrades = getGrades(taskId);
+  const rawFinalScores = getFinalScores(taskId);
+
+  // Build rubric index: id -> "rubric_N"
+  const rubricIndex = {};
+  rubrics.forEach((r, i) => { rubricIndex[r.id] = 'rubric_' + (i + 1); });
+
+  // Format rubrics (drop internal fields)
+  const formattedRubrics = rubrics.map((r, i) => ({
+    id: 'rubric_' + (i + 1),
+    criterion: r.criterion,
+    type: r.type,
+    is_positive: !!r.is_positive,
+    importance: r.importance,
+    rationale: r.rationale || ''
   }));
-  return { task: { id: task.id, name: task.name }, rubrics, grades, finalScores, trajectories };
+
+  // Format grades to match schema
+  const formattedGrades = rawGrades.map(g => ({
+    rubric: rubricIndex[g.rubric_id] || g.rubric_id,
+    pass: g.verdict === 'pass',
+    llm_model: g.model_name,
+    rationale: g.rationale || ''
+  }));
+
+  // Format final scores
+  const formattedFinalScores = rawFinalScores.map(fs => ({
+    llm_model: fs.model_name,
+    score: fs.score,
+    rationale: fs.rationale || ''
+  }));
+
+  // Model ranking: sort by score descending
+  const modelRanking = [...rawFinalScores]
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .map(fs => fs.model_name);
+
+  return {
+    task: { id: task.id, name: task.name },
+    rubrics: formattedRubrics,
+    grades: formattedGrades,
+    final_scores: formattedFinalScores,
+    model_ranking: modelRanking
+  };
 }
