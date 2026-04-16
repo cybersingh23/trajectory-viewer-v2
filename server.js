@@ -12,6 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
+const BASE_PATH = (process.env.BASE_PATH || '').replace(/\/$/, '');
 
 // Load .env manually (no dotenv dependency)
 import { readFileSync } from 'fs';
@@ -49,9 +50,9 @@ app.use('/api/user', userRoutes);
 
 // SPA fallback — serve login for unauthenticated, redirect based on role
 app.get('/', (req, res) => {
-  if (!req.session.userId) return res.redirect('/login.html');
-  if (req.session.isAdmin) return res.redirect('/admin.html');
-  res.redirect('/viewer.html');
+  if (!req.session.userId) return res.redirect(`${BASE_PATH}/login.html`);
+  if (req.session.isAdmin) return res.redirect(`${BASE_PATH}/admin.html`);
+  res.redirect(`${BASE_PATH}/viewer.html`);
 });
 
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
