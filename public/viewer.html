@@ -409,6 +409,7 @@ body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-se
 </div>
 
 <script>
+var BASE_PATH = (window.location.pathname.match(/^\/sandbox\/[^\/]+/) || [''])[0];
 /* ═══════════════════════════════════════════════════════════
    STATE
    ═══════════════════════════════════════════════════════════ */
@@ -441,21 +442,21 @@ function toast(msg) {
    ═══════════════════════════════════════════════════════════ */
 (async function() {
   // Check auth
-  var meRes = await fetch('/api/auth/me');
-  if (!meRes.ok) return window.location.href = '/login.html';
+  var meRes = await fetch(BASE_PATH + '/api/auth/me');
+  if (!meRes.ok) return window.location.href = BASE_PATH + '/login.html';
   var me = await meRes.json();
   STATE.isAdmin = me.isAdmin;
 
   // Determine API paths based on role
-  var taskUrl = me.isAdmin ? null : '/api/user/task';
-  var rubricsUrl = me.isAdmin ? null : '/api/user/rubrics';
+  var taskUrl = me.isAdmin ? null : BASE_PATH + '/api/user/task';
+  var rubricsUrl = me.isAdmin ? null : BASE_PATH + '/api/user/rubrics';
 
   if (me.isAdmin) {
     // Admin can also view - check URL for task ID
     var params = new URLSearchParams(window.location.search);
     var taskId = params.get('task');
-    if (!taskId) return window.location.href = '/admin.html';
-    taskUrl = '/api/admin/tasks/' + taskId;
+    if (!taskId) return window.location.href = BASE_PATH + '/admin.html';
+    taskUrl = BASE_PATH + '/api/admin/tasks/' + taskId;
     rubricsUrl = null; // rubrics included in admin response
   }
 
@@ -514,8 +515,8 @@ function toast(msg) {
     if (!me.isAdmin) {
       try {
         var [gradesRes, scoresRes] = await Promise.all([
-          fetch('/api/user/grades'),
-          fetch('/api/user/final-scores')
+          fetch(BASE_PATH + '/api/user/grades'),
+          fetch(BASE_PATH + '/api/user/final-scores')
         ]);
         if (gradesRes.ok) {
           var gradesArr = await gradesRes.json();
@@ -1339,8 +1340,8 @@ async function deleteRubric(id) {
 }
 
 async function logout() {
-  await fetch('/api/auth/logout', { method: 'POST' });
-  window.location.href = '/login.html';
+  await fetch(BASE_PATH + '/api/auth/logout', { method: 'POST' });
+  window.location.href = BASE_PATH + '/login.html';
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1452,7 +1453,7 @@ function setGrade(rubricId, modelName, verdict) {
   // Highlight rationale if verdict set but no rationale
   if (ratEl) ratEl.classList.toggle('needs-rationale', newVerdict !== 'unset' && !existing.rationale.trim());
   updateGradeProgress();
-  fetch('/api/user/grades', {
+  fetch(BASE_PATH + '/api/user/grades', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ rubricId: rubricId, modelName: modelName, verdict: newVerdict, rationale: existing.rationale })
@@ -1468,7 +1469,7 @@ function saveGradeRationale(rubricId, modelName) {
   el.classList.toggle('needs-rationale', existing.verdict !== 'unset' && !el.value.trim());
   updateGradeProgress();
   _debounce('gr-' + key, function() {
-    fetch('/api/user/grades', {
+    fetch(BASE_PATH + '/api/user/grades', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ rubricId: rubricId, modelName: modelName, verdict: existing.verdict, rationale: el.value })
@@ -1487,7 +1488,7 @@ function setFinalScore(modelName, score) {
   var ratEl = document.getElementById('fsr-' + modelName);
   if (ratEl) ratEl.classList.toggle('needs-rationale', newScore && !existing.rationale.trim());
   updateGradeProgress();
-  fetch('/api/user/final-scores', {
+  fetch(BASE_PATH + '/api/user/final-scores', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ modelName: modelName, score: newScore, rationale: existing.rationale })
@@ -1502,7 +1503,7 @@ function saveFinalScoreRationale(modelName) {
   el.classList.toggle('needs-rationale', existing.score && !el.value.trim());
   updateGradeProgress();
   _debounce('fsr-' + modelName, function() {
-    fetch('/api/user/final-scores', {
+    fetch(BASE_PATH + '/api/user/final-scores', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modelName: modelName, score: existing.score, rationale: el.value })

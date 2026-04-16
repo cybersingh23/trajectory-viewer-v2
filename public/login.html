@@ -63,6 +63,7 @@ body{font-family:-apple-system,'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-se
 </div>
 
 <script>
+var BASE_PATH = (window.location.pathname.match(/^\/sandbox\/[^\/]+/) || [''])[0];
 document.getElementById('login-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   var btn = document.getElementById('login-btn');
@@ -72,7 +73,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
   btn.textContent = 'Signing in...';
 
   try {
-    var res = await fetch('/api/auth/login', {
+    var res = await fetch(BASE_PATH + '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -82,7 +83,7 @@ document.getElementById('login-form').addEventListener('submit', async function(
     });
     var data = await res.json();
     if (!res.ok) { errEl.textContent = data.error || 'Login failed'; return; }
-    window.location.href = data.isAdmin ? '/admin.html' : '/viewer.html';
+    window.location.href = data.isAdmin ? BASE_PATH + '/admin.html' : BASE_PATH + '/viewer.html';
   } catch(err) {
     errEl.textContent = 'Connection error';
   } finally {

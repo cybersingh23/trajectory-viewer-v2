@@ -205,14 +205,15 @@ input[type=file]{display:none}
 <div class="toast" id="toast"></div>
 
 <script>
+var BASE_PATH = (window.location.pathname.match(/^\/sandbox\/[^\/]+/) || [''])[0];
 var currentTaskId = null;
 
 // ── Auth check ──
 (async function() {
-  var res = await fetch('/api/auth/me');
-  if (!res.ok) return window.location.href = '/login.html';
+  var res = await fetch(BASE_PATH + '/api/auth/me');
+  if (!res.ok) return window.location.href = BASE_PATH + '/login.html';
   var data = await res.json();
-  if (!data.isAdmin) return window.location.href = '/viewer.html';
+  if (!data.isAdmin) return window.location.href = BASE_PATH + '/viewer.html';
   loadTasks();
 })();
 
@@ -228,13 +229,13 @@ function esc(s) { var d = document.createElement('div'); d.textContent = s; retu
 
 // ── Logout ──
 async function logout() {
-  await fetch('/api/auth/logout', { method: 'POST' });
-  window.location.href = '/login.html';
+  await fetch(BASE_PATH + '/api/auth/logout', { method: 'POST' });
+  window.location.href = BASE_PATH + '/login.html';
 }
 
 // ── Export CSV ──
 function exportCSV() {
-  window.location.href = '/api/admin/credentials/export';
+  window.location.href = BASE_PATH + '/api/admin/credentials/export';
 }
 
 // ═══════════════════════════════════════════════
@@ -426,7 +427,7 @@ async function processUpload(files) {
 
   uz.querySelector('h2').textContent = 'Uploading to server...';
   try {
-    var res = await fetch('/api/admin/tasks', {
+    var res = await fetch(BASE_PATH + '/api/admin/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: taskName, taskJson: taskJson, models: models })
@@ -523,7 +524,7 @@ async function processNestedUpload(files, rootDepth) {
     }
 
     try {
-      var res = await fetch('/api/admin/tasks', {
+      var res = await fetch(BASE_PATH + '/api/admin/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: taskJson.task_title, taskJson: taskJson, models: models })
@@ -545,7 +546,7 @@ async function processNestedUpload(files, rootDepth) {
 // TASK LIST
 // ═══════════════════════════════════════════════
 async function loadTasks() {
-  var res = await fetch('/api/admin/tasks');
+  var res = await fetch(BASE_PATH + '/api/admin/tasks');
   var tasks = await res.json();
   var el = document.getElementById('task-list');
 
@@ -572,7 +573,7 @@ async function loadTasks() {
 
 async function deleteTask(id, name) {
   if (!confirm('Delete task "' + name + '"? This cannot be undone.')) return;
-  await fetch('/api/admin/tasks/' + id, { method: 'DELETE' });
+  await fetch(BASE_PATH + '/api/admin/tasks/' + id, { method: 'DELETE' });
   toast('Task deleted');
   loadTasks();
 }
@@ -586,7 +587,7 @@ async function showTask(id) {
   document.getElementById('task-detail').style.display = 'block';
   document.getElementById('detail-content').innerHTML = '<div class="loading"><span class="spinner"></span>Loading...</div>';
 
-  var res = await fetch('/api/admin/tasks/' + id);
+  var res = await fetch(BASE_PATH + '/api/admin/tasks/' + id);
   var data = await res.json();
   renderDetail(data);
 }
@@ -604,7 +605,7 @@ function renderDetail(data) {
 
   html += '<div class="detail-header">';
   html += '<h2>' + esc(t.name) + '</h2>';
-  html += '<button class="act-btn" onclick="window.open(\'/viewer.html?task=' + t.id + '\',\'_blank\')">View Trajectories</button>';
+  html += '<button class="act-btn" onclick="window.open(BASE_PATH+\'/viewer.html?task=' + t.id + '\',\'_blank\')">View Trajectories</button>';
   html += '<button class="act-btn primary" onclick="generateRubrics()">Generate Rubrics</button>';
   html += '<button class="act-btn" onclick="addRubricForm()">+ Add Rubric</button>';
   html += '</div>';
@@ -738,7 +739,7 @@ function startProgressPoll() {
   _genCurrentStep = 1;
   _genPollTimer = setInterval(async function() {
     try {
-      var res = await fetch('/api/admin/tasks/' + currentTaskId + '/generate-rubrics/progress');
+      var res = await fetch(BASE_PATH + '/api/admin/tasks/' + currentTaskId + '/generate-rubrics/progress');
       var p = await res.json();
       if (p.active) updateGenProgress(p);
     } catch(e) {}
@@ -772,7 +773,7 @@ async function generateRubrics() {
   startProgressPoll();
 
   try {
-    var res = await fetch('/api/admin/tasks/' + currentTaskId + '/generate-rubrics', { method: 'POST' });
+    var res = await fetch(BASE_PATH + '/api/admin/tasks/' + currentTaskId + '/generate-rubrics', { method: 'POST' });
     stopProgressPoll();
     var data = await res.json();
     if (!res.ok) throw new Error(data.error);
@@ -829,7 +830,7 @@ async function saveNewRubric() {
   var milestoneId = form.querySelector('[name=milestone_id]').value.trim();
   var rationale = form.querySelector('[name=rationale]').value.trim();
 
-  await fetch('/api/admin/tasks/' + currentTaskId + '/rubrics', {
+  await fetch(BASE_PATH + '/api/admin/tasks/' + currentTaskId + '/rubrics', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ criterion, type, importance, is_positive: isPositive, milestone_id: milestoneId || null, rationale })
@@ -840,7 +841,7 @@ async function saveNewRubric() {
 
 async function deleteRubric(id) {
   if (!confirm('Delete this rubric?')) return;
-  await fetch('/api/admin/rubrics/' + id, { method: 'DELETE' });
+  await fetch(BASE_PATH + '/api/admin/rubrics/' + id, { method: 'DELETE' });
   var el = document.getElementById('rubric-' + id);
   if (el) el.remove();
   toast('Rubric deleted');
@@ -882,7 +883,7 @@ async function saveEditRubric(id) {
   var milestoneId = form.querySelector('[name=milestone_id]').value.trim();
   var rationale = form.querySelector('[name=rationale]').value.trim();
 
-  await fetch('/api/admin/rubrics/' + id, {
+  await fetch(BASE_PATH + '/api/admin/rubrics/' + id, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ criterion, type, importance, is_positive: isPositive, milestone_id: milestoneId || null, rationale })
